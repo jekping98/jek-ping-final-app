@@ -1,356 +1,489 @@
+ // ============================================================
+// JEK-PING APP - FULL REBUILD WITH ERROR HANDLING
+// Firebase Project: jek-ping-app-8768f
 // ============================================================
-// 1. FIREBASE CONFIG
-// ============================================================
-const firebaseConfig = {
-    apiKey: "AIzaSyCQIRIHrFZUow9Sz_QEYwQ-FQnmdYxMuqg",
-    authDomain: "jek-ping-app.firebaseapp.com",
-    databaseURL: "https://jek-ping-app-default-rtdb.firebaseio.com",
-    projectId: "jek-ping-app",
-    storageBucket: "jek-ping-app.firebasestorage.app",
-    messagingSenderId: "873715422867",
-    appId: "1:873715422867:web:f4f70b2d090abad15f5f66"
+
+// 1. FIREBASE CONFIG (project baru)
+var db = null;
+var auth = null;
+var firebaseReady = false;
+
+try {
+    var firebaseConfig = {
+        apiKey: "AIzaSyDrCIveGKsq_rUGKSMeRQD6GbwvrjIeklM",
+        authDomain: "jek-ping-app-8768f.firebaseapp.com",
+        databaseURL: "https://jek-ping-app-8768f-default-rtdb.firebaseio.com",
+        projectId: "jek-ping-app-8768f",
+        storageBucket: "jek-ping-app-8768f.firebasestorage.app",
+        messagingSenderId: "765553811005",
+        appId: "1:765553811005:web:0fcdbd52b1e29077fc5454",
+        measurementId: "G-EYYCQ20KXR"
+    };
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    auth = firebase.auth();
+    firebaseReady = true;
+    console.log('Firebase OK!');
+} catch(e) {
+    console.error('Firebase error:', e);
+}
+
+// 2. GLOBAL VARIABLES
+var currentUser = null;
+var lastOrderId = null;
+var currentPaymentMethod = 'cash';
+var currentDesa = 'semua';
+var currentCategory = 'semua';
+var currentSearch = '';
+var currentOrderFilter = 'all';
+var currentPromoFilter = 'all';
+var currentRating = 0;
+var currentRatingOrderId = null;
+var isDriverOnline = true;
+var driverOrderCount = 0;
+var driverWalletBalance = 0;
+var userOrders = [];
+var currentRouteDistance = 0;
+var userLocation = { lat: -8.185, lng: 111.185 };
+var customerMap, driverMap, trackingMap;
+var customerMarker, driverMarker, destinationMarker, trackingDriverMarker;
+var directionsService, directionsRenderer;
+var mapsReady = false;
+
+var appSettings = {
+    rideBase: 6000, rideKm: 2000,
+    foodBase: 8000, foodKm: 2500,
+    sendBase: 10000, sendKm: 3000,
+    commissionPercent: 10,
+    minDriverBalance: 10000,
+    qrisMerchant: 'BOLO DEWE CENTER',
+    qrisNmid: 'ID1026513619555'
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const auth = firebase.auth();
+
+// 3. DATA TEMPAT (48 tempat, 8 desa)
+var allPlaces = [
+    {id:1,name:'Toko Makmur Jaya',type:'supermarket',typeLabel:'Supermarket',desa:'bandar',desaLabel:'Desa Bandar',address:'Jl. Raya Bandar No. 12',distance:'0.5 km',rating:4.8,reviews:124,status:'open',img:'\u{1F3EC}'},
+    {id:2,name:'Warung Bu Siti',type:'warung',typeLabel:'Warung Makan',desa:'bandar',desaLabel:'Desa Bandar',address:'Jl. Pasar Bandar',distance:'0.3 km',rating:4.9,reviews:89,status:'open',img:'\u{1F373}'},
+    {id:3,name:'Supermarket Bandar',type:'supermarket',typeLabel:'Supermarket',desa:'bandar',desaLabel:'Desa Bandar',address:'Jl. Utama Bandar No. 5',distance:'0.8 km',rating:4.7,reviews:203,status:'open',img:'\u{1F3EC}'},
+    {id:4,name:'Warung Nasi Bu Yati',type:'warung',typeLabel:'Warung Makan',desa:'bandar',desaLabel:'Desa Bandar',address:'Jl. Pasar Bandar Blok C',distance:'0.4 km',rating:4.8,reviews:93,status:'open',img:'\u{1F373}'},
+    {id:5,name:'Toko Sembako Pak Harto',type:'toko',typeLabel:'Toko Sembako',desa:'bandar',desaLabel:'Desa Bandar',address:'Jl. Raya Bandar No. 28',distance:'0.6 km',rating:4.6,reviews:78,status:'open',img:'\u{1F6CD}\uFE0F'},
+    {id:6,name:'Warung Kopi Pak Bro',type:'warung',typeLabel:'Warung Kopi',desa:'bandar',desaLabel:'Desa Bandar',address:'Jl. Pasar Bandar Timur',distance:'0.5 km',rating:4.7,reviews:64,status:'open',img:'\u2615'},
+    {id:101,name:'SDN 1 Bandar',type:'sekolah',typeLabel:'SD Negeri',desa:'bandar',desaLabel:'Desa Bandar',address:'Jl. Pendidikan No. 1',distance:'0.7 km',rating:4.7,reviews:156,status:'open',img:'\u{1F3EB}'},
+    {id:102,name:'SMPN 1 Bandar',type:'sekolah',typeLabel:'SMP Negeri',desa:'bandar',desaLabel:'Desa Bandar',address:'Jl. Pendidikan Raya',distance:'1.0 km',rating:4.8,reviews:245,status:'open',img:'\u{1F3EB}'},
+    {id:201,name:'Driver Hub Pusat',type:'driver',typeLabel:'Driver Hub',desa:'bandar',desaLabel:'Desa Bandar',address:'Jl. Raya Bandar No. 50',distance:'0.4 km',rating:4.9,reviews:234,status:'online',img:'\u{1F697}'},
+    {id:202,name:'Driver Hub Pasar',type:'driver',typeLabel:'Driver Hub',desa:'bandar',desaLabel:'Desa Bandar',address:'Jl. Pasar Bandar Timur',distance:'0.6 km',rating:4.8,reviews:198,status:'online',img:'\u{1F697}'},
+    {id:9,name:'Toko Bangunsari Jaya',type:'toko',typeLabel:'Toko Sembako',desa:'bangunsari',desaLabel:'Desa Bangunsari',address:'Jl. Bangunsari Raya',distance:'1.2 km',rating:4.5,reviews:52,status:'open',img:'\u{1F6CD}\uFE0F'},
+    {id:10,name:'Warung Bu Tini',type:'warung',typeLabel:'Warung Makan',desa:'bangunsari',desaLabel:'Desa Bangunsari',address:'Jl. Bangunsari Tengah',distance:'1.4 km',rating:4.6,reviews:48,status:'open',img:'\u{1F373}'},
+    {id:11,name:'Minimarket Bangunsari',type:'supermarket',typeLabel:'Minimarket',desa:'bangunsari',desaLabel:'Desa Bangunsari',address:'Jl. Bangunsari No. 8',distance:'1.5 km',rating:4.4,reviews:67,status:'open',img:'\u{1F3EC}'},
+    {id:13,name:'Warung Bakso Pak Slamet',type:'warung',typeLabel:'Warung Bakso',desa:'bangunsari',desaLabel:'Desa Bangunsari',address:'Jl. Bangunsari Selatan',distance:'1.8 km',rating:4.7,reviews:71,status:'open',img:'\u{1F35C}'},
+    {id:103,name:'SDN 1 Bangunsari',type:'sekolah',typeLabel:'SD Negeri',desa:'bangunsari',desaLabel:'Desa Bangunsari',address:'Jl. Bangunsari Tengah',distance:'1.5 km',rating:4.5,reviews:87,status:'open',img:'\u{1F3EB}'},
+    {id:203,name:'Driver Hub Bangunsari',type:'driver',typeLabel:'Driver Hub',desa:'bangunsari',desaLabel:'Desa Bangunsari',address:'Jl. Bangunsari Raya No. 15',distance:'1.3 km',rating:4.7,reviews:145,status:'online',img:'\u{1F697}'},
+    {id:14,name:'Toko Jeruk Makmur',type:'toko',typeLabel:'Toko Sembako',desa:'jeruk',desaLabel:'Desa Jeruk',address:'Jl. Jeruk Raya',distance:'2.0 km',rating:4.5,reviews:45,status:'open',img:'\u{1F6CD}\uFE0F'},
+    {id:15,name:'Warung Bu Minah',type:'warung',typeLabel:'Warung Makan',desa:'jeruk',desaLabel:'Desa Jeruk',address:'Jl. Jeruk Tengah',distance:'2.1 km',rating:4.6,reviews:56,status:'open',img:'\u{1F373}'},
+    {id:104,name:'SDN 1 Jeruk',type:'sekolah',typeLabel:'SD Negeri',desa:'jeruk',desaLabel:'Desa Jeruk',address:'Jl. Jeruk Raya',distance:'2.2 km',rating:4.5,reviews:92,status:'open',img:'\u{1F3EB}'},
+    {id:204,name:'Driver Hub Jeruk',type:'driver',typeLabel:'Driver Hub',desa:'jeruk',desaLabel:'Desa Jeruk',address:'Jl. Jeruk Raya No. 20',distance:'2.1 km',rating:4.7,reviews:128,status:'online',img:'\u{1F697}'},
+    {id:17,name:'Toko Kledung Sejahtera',type:'toko',typeLabel:'Toko Sembako',desa:'kledung',desaLabel:'Desa Kledung',address:'Jl. Kledung Raya',distance:'2.5 km',rating:4.4,reviews:42,status:'open',img:'\u{1F6CD}\uFE0F'},
+    {id:18,name:'Warung Bu Darmi',type:'warung',typeLabel:'Warung Makan',desa:'kledung',desaLabel:'Desa Kledung',address:'Jl. Kledung Tengah',distance:'2.6 km',rating:4.6,reviews:44,status:'open',img:'\u{1F373}'},
+    {id:105,name:'SDN 1 Kledung',type:'sekolah',typeLabel:'SD Negeri',desa:'kledung',desaLabel:'Desa Kledung',address:'Jl. Kledung Raya',distance:'2.7 km',rating:4.5,reviews:88,status:'open',img:'\u{1F3EB}'},
+    {id:205,name:'Driver Hub Kledung',type:'driver',typeLabel:'Driver Hub',desa:'kledung',desaLabel:'Desa Kledung',address:'Jl. Kledung Raya No. 18',distance:'2.6 km',rating:4.7,reviews:115,status:'online',img:'\u{1F697}'},
+    {id:21,name:'Toko Fresh Sayur Ngunut',type:'fresh',typeLabel:'Sayur Segar',desa:'ngunut',desaLabel:'Desa Ngunut',address:'Jl. Ngunut Market',distance:'3.0 km',rating:4.4,reviews:38,status:'open',img:'\u{1F96C}'},
+    {id:22,name:'Warung Bu Darmi Ngunut',type:'warung',typeLabel:'Warung Makan',desa:'ngunut',desaLabel:'Desa Ngunut',address:'Jl. Ngunut Raya',distance:'3.1 km',rating:4.6,reviews:44,status:'open',img:'\u{1F373}'},
+    {id:109,name:'SDN 2 Ngunut',type:'sekolah',typeLabel:'SD Negeri',desa:'ngunut',desaLabel:'Desa Ngunut',address:'Jl. Ngunut Pendidikan',distance:'3.4 km',rating:4.5,reviews:75,status:'open',img:'\u{1F3EB}'},
+    {id:206,name:'Driver Hub Ngunut',type:'driver',typeLabel:'Driver Hub',desa:'ngunut',desaLabel:'Desa Ngunut',address:'Jl. Ngunut Tengah',distance:'3.2 km',rating:4.6,reviews:95,status:'online',img:'\u{1F697}'},
+    {id:24,name:'Toko Petungsinarang Makmur',type:'toko',typeLabel:'Toko Sembako',desa:'petungsinarang',desaLabel:'Desa Petungsinarang',address:'Jl. Petungsinarang Raya',distance:'3.5 km',rating:4.5,reviews:48,status:'open',img:'\u{1F6CD}\uFE0F'},
+    {id:25,name:'Warung Bu Sumi',type:'warung',typeLabel:'Warung Nasi',desa:'petungsinarang',desaLabel:'Desa Petungsinarang',address:'Jl. Petungsinarang Barat',distance:'3.6 km',rating:4.6,reviews:48,status:'open',img:'\u{1F373}'},
+    {id:111,name:'SDN 1 Petungsinarang',type:'sekolah',typeLabel:'SD Negeri',desa:'petungsinarang',desaLabel:'Desa Petungsinarang',address:'Jl. Petungsinarang Pendidikan',distance:'3.6 km',rating:4.5,reviews:80,status:'open',img:'\u{1F3EB}'},
+    {id:207,name:'Driver Hub Petungsinarang',type:'driver',typeLabel:'Driver Hub',desa:'petungsinarang',desaLabel:'Desa Petungsinarang',address:'Jl. Petungsinarang Raya No. 5',distance:'3.6 km',rating:4.6,reviews:88,status:'online',img:'\u{1F697}'},
+    {id:27,name:'Toko Tumpuk Sejahtera',type:'toko',typeLabel:'Toko Sembako',desa:'tumpuk',desaLabel:'Desa Tumpuk',address:'Jl. Tumpuk Raya',distance:'4.0 km',rating:4.4,reviews:39,status:'open',img:'\u{1F6CD}\uFE0F'},
+    {id:28,name:'Warung Bu Yati Tumpuk',type:'warung',typeLabel:'Warung Soto',desa:'tumpuk',desaLabel:'Desa Tumpuk',address:'Jl. Tumpuk Timur',distance:'4.1 km',rating:4.7,reviews:56,status:'open',img:'\u{1F35C}'},
+    {id:113,name:'SDN 1 Tumpuk',type:'sekolah',typeLabel:'SD Negeri',desa:'tumpuk',desaLabel:'Desa Tumpuk',address:'Jl. Tumpuk Pendidikan',distance:'4.1 km',rating:4.5,reviews:70,status:'open',img:'\u{1F3EB}'},
+    {id:208,name:'Driver Hub Tumpuk',type:'driver',typeLabel:'Driver Hub',desa:'tumpuk',desaLabel:'Desa Tumpuk',address:'Jl. Tumpuk Tengah No. 10',distance:'4.2 km',rating:4.6,reviews:78,status:'online',img:'\u{1F697}'},
+    {id:30,name:'Toko Kelontong Bu Ani',type:'toko',typeLabel:'Toko Kelontong',desa:'watupatok',desaLabel:'Desa Watupatok',address:'Jl. Watupatok No. 3',distance:'1.8 km',rating:4.5,reviews:34,status:'open',img:'\u{1F6CD}\uFE0F'},
+    {id:31,name:'Warung Bu Lastri',type:'warung',typeLabel:'Warung Makan',desa:'watupatok',desaLabel:'Desa Watupatok',address:'Jl. Watupatok Raya',distance:'2.0 km',rating:4.6,reviews:47,status:'open',img:'\u{1F373}'},
+    {id:115,name:'SDN 1 Watupatok',type:'sekolah',typeLabel:'SD Negeri',desa:'watupatok',desaLabel:'Desa Watupatok',address:'Jl. Watupatok Pendidikan',distance:'2.0 km',rating:4.5,reviews:65,status:'open',img:'\u{1F3EB}'},
+    {id:209,name:'Driver Hub Watupatok',type:'driver',typeLabel:'Driver Hub',desa:'watupatok',desaLabel:'Desa Watupatok',address:'Jl. Watupatok Tengah',distance:'2.0 km',rating:4.6,reviews:65,status:'online',img:'\u{1F697}'}
+];
+
+var allPromos = [
+    {id:1,category:'newuser',icon:'\u{1F381}',color:'red',title:'Diskon 50% Pengguna Baru',desc:'Potongan 50% untuk 3 pesanan pertama. Maks Rp 20.000.',code:'NEWBIE50',timer:'2 Hari 10 Jam'},
+    {id:2,category:'cashback',icon:'\u{1F4B0}',color:'orange',title:'Cashback 30% Antar Makanan',desc:'Cashback 30% jam makan siang (11:00-13:00).',code:'MAKAN30',timer:'5 Hari 8 Jam'},
+    {id:3,category:'mission',icon:'\u{1F3AF}',color:'green',title:'Misi: 5 Order = Rp 25.000',desc:'Selesaikan 5 order seminggu, bonus Rp 25.000!',code:'MISSION5',timer:'6 Hari 20 Jam'},
+    {id:4,category:'cashback',icon:'\u{1F3CD}\uFE0F',color:'blue',title:'Gratis Ongkir Weekend',desc:'Gratis ongkir s/d Rp 15.000 setiap Sabtu & Minggu.',code:'WEEKEND',timer:'3 Hari 12 Jam'},
+    {id:5,category:'newuser',icon:'\u{1F389}',color:'red',title:'Bonus Saldo Rp 10.000',desc:'Register sekarang, bonus saldo Rp 10.000.',code:'WELCOME',timer:'7 Hari'},
+    {id:6,category:'mission',icon:'\u{1F465}',color:'orange',title:'Ajak Teman Rp 50.000',desc:'Ajak 10 teman order pertama, bonus Rp 50.000!',code:'REFERRAL',timer:'10 Hari'},
+    {id:7,category:'cashback',icon:'\u{1F4E6}',color:'green',title:'Cashback Barang 20%',desc:'Cashback 20% kirim barang setiap Senin.',code:'KIRIM20',timer:'4 Hari 6 Jam'},
+    {id:8,category:'mission',icon:'\u2B50',color:'blue',title:'Misi Rating 5 Bintang',desc:'Rating 5 bintang 3 order, voucher Rp 10.000.',code:'RATING5',timer:'8 Hari'}
+];
 
 // ============================================================
-// 2. GOOGLE AUTH
+// TOAST NOTIFICATION
 // ============================================================
-let currentUser = null;
-let lastOrderId = null;
+function showToast(type, title, message) {
+    var c = document.getElementById('toastContainer');
+    if (!c) return;
+    var icons = {success:'\u2705',error:'\u274C',warning:'\u26A0\uFE0F',info:'\u2139\uFE0F'};
+    var t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.innerHTML = '<div class="toast-icon">'+(icons[type]||'\u2139\uFE0F')+'</div><div class="toast-content"><div class="toast-title">'+title+'</div><div class="toast-message">'+message+'</div></div>';
+    c.appendChild(t);
+    setTimeout(function(){t.style.opacity='0';t.style.transform='translateY(-20px)';t.style.transition='all 0.3s';setTimeout(function(){t.remove()},300)},3000);
+}
 
+// ============================================================
+// GOOGLE AUTH
+// ============================================================
 function handleGoogleLogin() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).then((result) => {
+    if (!firebaseReady || !auth) { showToast('error','Error','Firebase belum siap.'); return; }
+    var provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).then(function(result) {
         currentUser = result.user;
         saveUserToDatabase(currentUser);
         updateUserUI(currentUser);
-        showToast('success', 'Login Berhasil', `Selamat datang, ${currentUser.displayName}!`);
-    }).catch((error) => {
-        showToast('error', 'Login Gagal', error.message);
+        showToast('success','Login Berhasil','Selamat datang, '+currentUser.displayName+'!');
+    }).catch(function(error) {
+        console.error('Login error:', error);
+        showToast('error','Login Gagal', error.message || 'Popup diblokir browser');
     });
 }
 
 function handleGoogleLogout() {
-    if (confirm('Yakin ingin logout?')) {
-        auth.signOut().then(() => {
+    if (!confirm('Yakin ingin logout?')) return;
+    if (firebaseReady && auth) {
+        auth.signOut().then(function() {
             currentUser = null;
             localStorage.removeItem('jekping_user');
             updateUserUI(null);
             closeAllPages();
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.querySelector('.nav-item').classList.add('active');
-            showToast('info', 'Logout', 'Anda sudah logout.');
+            var items = document.querySelectorAll('.nav-item');
+            for(var i=0;i<items.length;i++) items[i].classList.remove('active');
+            if(items[0]) items[0].classList.add('active');
+            showToast('info','Logout','Anda sudah logout.');
         });
+    } else {
+        currentUser = null;
+        localStorage.removeItem('jekping_user');
+        updateUserUI(null);
+        showToast('info','Logout','Anda sudah logout.');
     }
 }
 
 function saveUserToDatabase(user) {
-    db.ref('users/' + user.uid).set({
-        uid: user.uid,
-        name: user.displayName,
-        email: user.email,
-        photo: user.photoURL,
-        lastLogin: firebase.database.ServerValue.TIMESTAMP
-    });
-    localStorage.setItem('jekping_user', JSON.stringify({
-        uid: user.uid,
-        displayName: user.displayName,
-        email: user.email,
-        photoURL: user.photoURL
-    }));
+    if (firebaseReady && db) {
+        try { db.ref('users/'+user.uid).set({uid:user.uid,name:user.displayName,email:user.email,photo:user.photoURL,lastLogin:firebase.database.ServerValue.TIMESTAMP}); } catch(e){}
+    }
+    localStorage.setItem('jekping_user', JSON.stringify({uid:user.uid,displayName:user.displayName,email:user.email,photoURL:user.photoURL}));
 }
 
 function updateUserUI(user) {
-    const btnText = document.getElementById('googleBtnText');
-    const profileCard = document.getElementById('userProfileCard');
-    const logoutItem = document.getElementById('profileLogoutItem');
-
+    var b = document.getElementById('googleBtnText');
+    var p = document.getElementById('userProfileCard');
+    var l = document.getElementById('profileLogoutItem');
+    if (!b) return;
     if (user) {
-        btnText.textContent = user.displayName.split(' ')[0];
-        profileCard.style.display = 'flex';
-        logoutItem.style.display = 'flex';
-        document.getElementById('userName').textContent = user.displayName;
-        document.getElementById('userEmail').textContent = user.email;
-        document.getElementById('profileName').textContent = user.displayName;
-        document.getElementById('profileEmail').textContent = user.email;
-        if (user.photoURL) {
-            document.getElementById('userAvatar').innerHTML = `<img src="${user.photoURL}" style="width:100%;height:100%;border-radius:50%;">`;
-            document.getElementById('profileAvatarLarge').innerHTML = `<img src="${user.photoURL}">`;
+        b.textContent = user.displayName ? user.displayName.split(' ')[0] : 'User';
+        if(p) p.style.display='flex';
+        if(l) l.style.display='flex';
+        var e;
+        e=document.getElementById('userName');if(e)e.textContent=user.displayName||'User';
+        e=document.getElementById('userEmail');if(e)e.textContent=user.email||'';
+        e=document.getElementById('profileName');if(e)e.textContent=user.displayName||'User';
+        e=document.getElementById('profileEmail');if(e)e.textContent=user.email||'';
+        if(user.photoURL){
+            e=document.getElementById('userAvatar');if(e)e.innerHTML='<img src="'+user.photoURL+'" style="width:100%;height:100%;border-radius:50%">';
+            e=document.getElementById('profileAvatarLarge');if(e)e.innerHTML='<img src="'+user.photoURL+'">';
         }
     } else {
-        btnText.textContent = 'Login';
-        profileCard.style.display = 'none';
-        logoutItem.style.display = 'none';
-        document.getElementById('profileName').textContent = 'Pelanggan';
-        document.getElementById('profileEmail').textContent = 'Silakan login terlebih dahulu';
-        document.getElementById('profileAvatarLarge').innerHTML = '👤';
+        b.textContent='Login';
+        if(p)p.style.display='none';
+        if(l)l.style.display='none';
+        var e2;
+        e2=document.getElementById('profileName');if(e2)e2.textContent='Pelanggan';
+        e2=document.getElementById('profileEmail');if(e2)e2.textContent='Silakan login terlebih dahulu';
+        e2=document.getElementById('profileAvatarLarge');if(e2)e2.innerHTML='\u{1F464}';
     }
 }
 
 function checkLoginAndOpen(service) {
     if (!currentUser) {
-        if (confirm('🔐 Anda perlu login terlebih dahulu.\n\nLogin dengan Google sekarang?')) {
-            handleGoogleLogin();
-        }
+        if(confirm('Anda perlu login terlebih dahulu.\n\nLogin dengan Google sekarang?')) handleGoogleLogin();
         return;
     }
-    if (service === 'belanja') openBelanja();
-    else openServicePage(service);
+    if (service==='belanja') openBelanja(); else openServicePage(service);
 }
 
 function checkSavedUser() {
-    const savedUser = localStorage.getItem('jekping_user');
-    if (savedUser) {
-        try {
-            currentUser = JSON.parse(savedUser);
-            updateUserUI(currentUser);
-        } catch (e) {
-            console.error(e);
-        }
-    }
+    var s = localStorage.getItem('jekping_user');
+    if (s) { try { currentUser=JSON.parse(s); updateUserUI(currentUser); } catch(e){} }
 }
 
 // ============================================================
-// 3. TOAST NOTIFICATION
+// GOOGLE MAPS
 // ============================================================
-function showToast(type, title, message) {
-    const container = document.getElementById('toastContainer');
-    const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `
-        <div class="toast-icon">${icons[type] || 'ℹ️'}</div>
-        <div class="toast-content">
-            <div class="toast-title">${title}</div>
-            <div class="toast-message">${message}</div>
-        </div>
-    `;
-    container.appendChild(toast);
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(-20px)';
-        toast.style.transition = 'all 0.3s';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-
-// ============================================================
-// 4. GOOGLE MAPS
-// ============================================================
-let customerMap, driverMap, trackingMap;
-let customerMarker, driverMarker, destinationMarker, trackingDriverMarker;
-let directionsService, directionsRenderer;
-let userLocation = { lat: -8.185, lng: 111.185 };
-let currentRouteDistance = 0;
-
 function initMaps() {
-    initCustomerMap();
-    initDriverMap();
-}
-
-function initCustomerMap() {
-    customerMap = new google.maps.Map(document.getElementById('customerMap'), {
-        center: userLocation, zoom: 14,
-        mapTypeControl: false, streetViewControl: false, fullscreenControl: false
-    });
-    customerMarker = new google.maps.Marker({
-        position: userLocation, map: customerMap, title: 'Lokasi Anda',
-        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#4CAF50', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 }
-    });
-    destinationMarker = new google.maps.Marker({
-        map: customerMap, visible: false,
-        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#FF3B30', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 }
-    });
-    directionsService = new google.maps.DirectionsService();
-    directionsRenderer = new google.maps.DirectionsRenderer({ map: customerMap, suppressMarkers: true });
-}
-
-function initDriverMap() {
-    driverMap = new google.maps.Map(document.getElementById('driverMap'), {
-        center: userLocation, zoom: 14,
-        mapTypeControl: false, streetViewControl: false, fullscreenControl: false
-    });
-    driverMarker = new google.maps.Marker({
-        position: userLocation, map: driverMap,
-        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 12, fillColor: '#FFB800', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 }
-    });
-    setInterval(updateDriverLocation, 5000);
+    try {
+        if (typeof google==='undefined'||!google.maps) { console.warn('Maps not loaded'); return; }
+        var cm = document.getElementById('customerMap');
+        if (cm) {
+            customerMap = new google.maps.Map(cm,{center:userLocation,zoom:14,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});
+            customerMarker = new google.maps.Marker({position:userLocation,map:customerMap,icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:'#4CAF50',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
+            destinationMarker = new google.maps.Marker({map:customerMap,visible:false,icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:'#FF3B30',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer({map:customerMap,suppressMarkers:true});
+        }
+        var dm = document.getElementById('driverMap');
+        if (dm) {
+            driverMap = new google.maps.Map(dm,{center:userLocation,zoom:14,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});
+            driverMarker = new google.maps.Marker({position:userLocation,map:driverMap,icon:{path:google.maps.SymbolPath.CIRCLE,scale:12,fillColor:'#FFB800',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
+        }
+        mapsReady = true;
+        console.log('Maps OK!');
+    } catch(e) { console.error('Maps error:',e); }
 }
 
 function initTrackingMap() {
     if (trackingMap) return;
-    trackingMap = new google.maps.Map(document.getElementById('trackingMap'), {
-        center: userLocation, zoom: 15,
-        mapTypeControl: false, streetViewControl: false, fullscreenControl: false
-    });
-    trackingDriverMarker = new google.maps.Marker({
-        position: userLocation, map: trackingMap, title: 'Driver',
-        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 12, fillColor: '#FFB800', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 }
-    });
-    simulateDriverMovement();
+    var el = document.getElementById('trackingMap');
+    if (!el||typeof google==='undefined') return;
+    try {
+        trackingMap = new google.maps.Map(el,{center:userLocation,zoom:15,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});
+        trackingDriverMarker = new google.maps.Marker({position:userLocation,map:trackingMap,icon:{path:google.maps.SymbolPath.CIRCLE,scale:12,fillColor:'#FFB800',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
+        var offset=0;
+        setInterval(function(){if(!trackingMap)return;offset+=0.0005;trackingDriverMarker.setPosition({lat:userLocation.lat+Math.sin(offset)*0.005,lng:userLocation.lng+Math.cos(offset)*0.005})},2000);
+    } catch(e){}
 }
 
-function simulateDriverMovement() {
-    let offset = 0;
-    setInterval(() => {
-        if (!trackingMap) return;
-        offset += 0.0005;
-        trackingDriverMarker.setPosition({
-            lat: userLocation.lat + Math.sin(offset) * 0.005,
-            lng: userLocation.lng + Math.cos(offset) * 0.005
-        });
-    }, 2000);
-}
-
-function calculateRoute(serviceType) {
-    let origin, destination;
-    if (serviceType === 'ride') {
-        origin = document.getElementById('ridePickup').value;
-        destination = document.getElementById('rideDestination').value;
-    } else if (serviceType === 'food') {
-        origin = document.getElementById('foodFrom').value;
-        destination = document.getElementById('foodTo').value;
-    } else if (serviceType === 'send') {
-        origin = document.getElementById('sendFrom').value;
-        destination = document.getElementById('sendTo').value;
-    }
-
-    if (!origin || !destination) {
-        showToast('warning', 'Data Kurang', 'Mohon isi lokasi asal dan tujuan!');
+function calculateRoute(st) {
+    var o,d;
+    if(st==='ride'){o=document.getElementById('ridePickup').value;d=document.getElementById('rideDestination').value}
+    else if(st==='food'){o=document.getElementById('foodFrom').value;d=document.getElementById('foodTo').value}
+    else if(st==='send'){o=document.getElementById('sendFrom').value;d=document.getElementById('sendTo').value}
+    if(!o||!d){showToast('warning','Data Kurang','Isi lokasi asal dan tujuan!');return}
+    if(!mapsReady||!directionsService){
+        currentRouteDistance=3;updatePrice(st,3);
+        var ri=document.getElementById(st+'RouteInfo');if(ri)ri.style.display='flex';
+        var rd=document.getElementById(st+'RouteDistance');if(rd)rd.textContent='Jarak: ~3 km (estimasi)';
+        var rt=document.getElementById(st+'RouteDuration');if(rt)rt.textContent='Estimasi: ~10 menit';
         return;
     }
-
     showLoading(true);
-    directionsService.route({ origin, destination, travelMode: google.maps.TravelMode.DRIVING }, (result, status) => {
+    directionsService.route({origin:o,destination:d,travelMode:google.maps.TravelMode.DRIVING},function(r,s){
         showLoading(false);
-        if (status === 'OK') {
-            const route = result.routes[0].legs[0];
-            const distance = route.distance.value / 1000;
-            currentRouteDistance = distance;
-            document.getElementById(`${serviceType}RouteInfo`).style.display = 'flex';
-            document.getElementById(`${serviceType}RouteDistance`).textContent = `Jarak: ${route.distance.text}`;
-            document.getElementById(`${serviceType}RouteDuration`).textContent = `Estimasi: ${route.duration.text}`;
-            updatePriceBasedOnDistance(serviceType, distance);
-            showToast('success', 'Rute Dihitung', `Jarak: ${route.distance.text}, ${route.duration.text}`);
-        } else {
-            showToast('error', 'Gagal', 'Gagal menghitung rute. Pastikan alamat valid.');
-        }
+        if(s==='OK'){var leg=r.routes[0].legs[0];var dist=leg.distance.value/1000;currentRouteDistance=dist;
+            var ri2=document.getElementById(st+'RouteInfo');if(ri2)ri2.style.display='flex';
+            var rd2=document.getElementById(st+'RouteDistance');if(rd2)rd2.textContent='Jarak: '+leg.distance.text;
+            var rt2=document.getElementById(st+'RouteDuration');if(rt2)rt2.textContent='Estimasi: '+leg.duration.text;
+            updatePrice(st,dist);showToast('success','Rute Dihitung','Jarak: '+leg.distance.text);
+        } else { showToast('error','Gagal','Gagal hitung rute.'); }
     });
 }
 
-function updatePriceBasedOnDistance(serviceType, distance) {
-    let base, perKm;
-    if (serviceType === 'ride') { base = appSettings.rideBase; perKm = appSettings.rideKm; }
-    else if (serviceType === 'food') { base = appSettings.foodBase; perKm = appSettings.foodKm; }
-    else if (serviceType === 'send') { base = appSettings.sendBase; perKm = appSettings.sendKm; }
-
-    const distanceCost = Math.round(distance * perKm);
-    const subtotal = base + distanceCost;
-    const commission = Math.round(subtotal * (appSettings.commissionPercent / 100));
-    const total = subtotal + commission;
-
-    document.getElementById(`${serviceType}BaseDisplay`).textContent = `Rp ${base.toLocaleString('id-ID')}`;
-    document.getElementById(`${serviceType}DistanceCost`).textContent = `Rp ${distanceCost.toLocaleString('id-ID')} (${distance.toFixed(1)} km)`;
-    document.getElementById(`${serviceType}CommissionDisplay`).textContent = `Rp ${commission.toLocaleString('id-ID')} (${appSettings.commissionPercent}%)`;
-    document.getElementById(`${serviceType}Total`).textContent = `Rp ${total.toLocaleString('id-ID')}`;
+function updatePrice(st,dist) {
+    var b,pk;
+    if(st==='ride'){b=appSettings.rideBase;pk=appSettings.rideKm}
+    else if(st==='food'){b=appSettings.foodBase;pk=appSettings.foodKm}
+    else if(st==='send'){b=appSettings.sendBase;pk=appSettings.sendKm}
+    else return;
+    var dc=Math.round(dist*pk),sub=b+dc,com=Math.round(sub*(appSettings.commissionPercent/100)),tot=sub+com;
+    var e;
+    e=document.getElementById(st+'BaseDisplay');if(e)e.textContent='Rp '+b.toLocaleString('id-ID');
+    e=document.getElementById(st+'DistanceCost');if(e)e.textContent='Rp '+dc.toLocaleString('id-ID')+' ('+dist.toFixed(1)+' km)';
+    e=document.getElementById(st+'CommissionDisplay');if(e)e.textContent='Rp '+com.toLocaleString('id-ID')+' ('+appSettings.commissionPercent+'%)';
+    e=document.getElementById(st+'Total');if(e)e.textContent='Rp '+tot.toLocaleString('id-ID');
 }
 
-function centerMapOnUser() {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((position) => {
-            userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
-            customerMap.setCenter(userLocation);
-            customerMarker.setPosition(userLocation);
-            customerMap.setZoom(16);
-        }, () => showToast('error', 'GPS', 'Gagal mendapatkan lokasi.'));
-    }
+function centerMapOnUser(){if(navigator.geolocation){navigator.geolocation.getCurrentPosition(function(p){userLocation={lat:p.coords.latitude,lng:p.coords.longitude};if(customerMap){customerMap.setCenter(userLocation);customerMap.setZoom(16)}if(customerMarker)customerMarker.setPosition(userLocation)},function(){showToast('error','GPS','Gagal dapatkan lokasi')})}}
+function centerDriverMap(){if(navigator.geolocation&&driverMap){navigator.geolocation.getCurrentPosition(function(p){driverMap.setCenter({lat:p.coords.latitude,lng:p.coords.longitude});driverMap.setZoom(16)})}}
+function startNavigation(){var d='';var e1=document.getElementById('rideDestination');if(e1)d=e1.value;if(!d){var e2=document.getElementById('foodTo');if(e2)d=e2.value}if(!d){var e3=document.getElementById('sendTo');if(e3)d=e3.value}if(!d){showToast('warning','Tujuan','Pilih tujuan dulu!');return}window.open('https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(d)+'&travelmode=driving','_blank')}
+
+// ============================================================
+// REAL-TIME LISTENERS
+// ============================================================
+if (firebaseReady && db) {
+    try {
+        db.ref('settings').on('value',function(snap){
+            if(snap.exists()){appSettings=Object.assign({},appSettings,snap.val());updateUI()}
+            else{db.ref('settings').set(appSettings)}
+        },function(e){console.error(e)});
+        db.ref('drivers/driverpinggir/wallet').on('value',function(snap){
+            if(snap.exists()){driverWalletBalance=snap.val().balance||0;updateWalletUI()}
+        },function(e){console.error(e)});
+    } catch(e){console.error(e)}
 }
 
-function updateDriverLocation() {
-    if (navigator.geolocation && driverMap) {
-        navigator.geolocation.getCurrentPosition((position) => {
-            const newLoc = { lat: position.coords.latitude, lng: position.coords.longitude };
-            driverMarker.setPosition(newLoc);
-            db.ref('drivers/driverpinggir/location').set({
-                lat: newLoc.lat, lng: newLoc.lng,
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-            });
-        });
-    }
+function updateWalletUI(){var e=document.getElementById('driverWalletBalance');if(e)e.textContent='Rp '+driverWalletBalance.toLocaleString('id-ID');var w=document.getElementById('lowBalanceWarning');if(w)w.style.display=driverWalletBalance<appSettings.minDriverBalance?'block':'none'}
+function updateUI(){
+    var e1=document.getElementById('speedcashMerchant');if(e1)e1.textContent=appSettings.qrisMerchant+' - Cepat & Aman';
+    var e2=document.getElementById('dynamicPricing');
+    if(e2)e2.innerHTML='\u{1F3CD}\uFE0F Antar Jemput: Rp '+appSettings.rideBase.toLocaleString()+' + (Rp '+appSettings.rideKm.toLocaleString()+'/km)<br>\u{1F354} Antar Makanan: Rp '+appSettings.foodBase.toLocaleString()+' + (Rp '+appSettings.foodKm.toLocaleString()+'/km)<br>\u{1F4E6} Antar Barang: Rp '+appSettings.sendBase.toLocaleString()+' + (Rp '+appSettings.sendKm.toLocaleString()+'/km)<br>\u2699\uFE0F <b>Komisi: '+appSettings.commissionPercent+'%</b><br>\u{1F4B3} QRIS: <b>'+appSettings.qrisMerchant+'</b>';
 }
 
-function centerDriverMap() {
-    if (navigator.geolocation && driverMap) {
-        navigator.geolocation.getCurrentPosition((position) => {
-            driverMap.setCenter({ lat: position.coords.latitude, lng: position.coords.longitude });
-            driverMap.setZoom(16);
-        });
-    }
+function listenForOrders(){
+    if(!firebaseReady||!db){showToast('warning','Offline','Firebase tidak tersedia');return}
+    db.ref('orders').orderByChild('status').equalTo('pending').on('child_added',function(snap){renderIncoming(snap.key,snap.val())});
 }
 
-function startNavigation() {
-    const dest = document.getElementById('rideDestination')?.value
-        || document.getElementById('foodTo')?.value
-        || document.getElementById('sendTo')?.value;
-    if (!dest) {
-        showToast('warning', 'Tujuan', 'Silakan pilih tujuan terlebih dahulu!');
-        return;
-    }
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving`, '_blank');
+function renderIncoming(id,order){
+    var c=document.getElementById('incomingOrders');if(!c)return;
+    if(c.querySelector('div[style]'))c.innerHTML='';
+    var d=document.createElement('div');d.className='incoming-order';d.id='order-'+id;
+    var tl={ride:'\u{1F3CD}\uFE0F Antar Jemput',food:'\u{1F354} Antar Makanan',send:'\u{1F4E6} Antar Barang'};
+    d.innerHTML='<div class="incoming-order-header"><span class="incoming-order-type '+order.type+'">'+(tl[order.type]||order.type)+'</span><span class="incoming-order-time">Baru saja</span></div><div class="incoming-order-route">'+order.pickup+' \u2192 '+order.destination+'</div><div class="incoming-order-address">\u{1F4DE} '+order.phone+'</div><div class="incoming-order-price">Rp '+(order.totalPrice||0).toLocaleString('id-ID')+'</div><div class="incoming-order-actions"><button class="order-accept-btn" onclick="acceptOrder(\''+id+'\',this)">\u2705 Terima</button><button class="order-decline-btn" onclick="declineOrder(\''+id+'\',this)">\u274C</button></div>';
+    c.prepend(d);showToast('info','Order Baru!',(tl[order.type]||'')+' dari '+order.phone);
 }
 
 // ============================================================
-// 5. DATA TEMPAT (48 Tempat di 8 Desa)
+// ORDERS
 // ============================================================
-const allPlaces = [
-    // BANDAR
-    { id: 1, name: 'Toko Makmur Jaya', type: 'supermarket', typeLabel: 'Supermarket', desa: 'bandar', desaLabel: 'Desa Bandar', address: 'Jl. Raya Bandar No. 12', distance: '0.5 km', rating: 4.8, reviews: 124, status: 'open', img: '🏬' },
-    { id: 2, name: 'Warung Bu Siti', type: 'warung', typeLabel: 'Warung Makan', desa: 'bandar', desaLabel: 'Desa Bandar', address: 'Jl. Pasar Bandar', distance: '0.3 km', rating: 4.9, reviews: 89, status: 'open', img: '🍳' },
-    { id: 3, name: 'Supermarket Bandar', type: 'supermarket', typeLabel: 'Supermarket', desa: 'bandar', desaLabel: 'Desa Bandar', address: 'Jl. Utama Bandar No. 5', distance: '0.8 km', rating: 4.7, reviews: 203, status: 'open', img: '🏬' },
-    { id: 4, name: 'Warung Nasi Bu Yati', type: 'warung', typeLabel: 'Warung Makan', desa: 'bandar', desaLabel: 'Desa Bandar', address: 'Jl. Pasar Bandar Blok C', distance: '0.4 km', rating: 4.8, reviews: 93, status: 'open', img: '🍳' },
-    { id: 5, name: 'Toko Sembako Pak Harto', type: 'toko', typeLabel: 'Toko Sembako', desa: 'bandar', desaLabel: 'Desa Bandar', address: 'Jl. Raya Bandar No. 28', distance: '0.6 km', rating: 4.6, reviews: 78, status: 'open', img: '🛍️' },
-    { id: 6, name: 'Warung Kopi Pak Bro', type: 'warung', typeLabel: 'Warung Kopi', desa: 'bandar', desaLabel: 'Desa Bandar', address: 'Jl. Pasar Bandar Timur', distance: '0.5 km', rating: 4.7, reviews: 64, status: 'open', img: '☕' },
-    { id: 7, name: 'Toko Obat Sehat', type: 'toko', typeLabel: 'Toko Obat', desa: 'bandar', desaLabel: 'Desa Bandar', address: 'Jl. Raya Bandar No. 15', distance: '0.7 km', rating: 4.5, reviews: 41, status: 'open', img: '💊' },
-    { id: 8, name: 'Toko Fresh Sayur', type: 'fresh', typeLabel: 'Sayur Segar', desa: 'bandar', desaLabel: 'Desa Bandar', address: 'Jl. Pasar Bandar Barat', distance: '0.4 km', rating: 4.6, reviews: 55, status: 'open', img: '🥬' },
-    { id: 101, name: 'SDN 1 Bandar', type: 'sekolah', typeLabel: 'SD Negeri', desa: 'bandar', desaLabel: 'Desa Bandar', address: 'Jl. Pendidikan No. 1', distance: '0.7 km', rating: 4.7, reviews: 156, status: 'open', img: '🏫' },
-    { id: 102, name: 'SMPN 1 Bandar', type: 'sekolah', typeLabel: 'SMP Negeri', desa: 'bandar', desaLabel: 'Desa Bandar', address: 'Jl. Pendidikan Raya', distance: '1.0 km', rating: 4.8, reviews: 245, status: 'open', img: '🏫' },
-    { id: 201, name: 'Driver Hub Pusat', type: 'driver', typeLabel: 'Driver Hub', desa: 'bandar', desaLabel: 'Desa Bandar', address: 'Jl. Raya Bandar No. 50', distance: '0.4 km', rating: 4.9, reviews: 234, status: 'online', img: '🚗' },
-    { id: 202, name: 'Driver Hub Pasar', type: 'driver', typeLabel: 'Driver Hub', desa: 'bandar', desaLabel: 'Desa Bandar', address: 'Jl. Pasar Bandar Timur', distance: '0.6 km', rating: 4.8, reviews: 198, status: 'online', img: '🚗' },
-    // BANGUNSARI
-    { id: 9, name: 'Toko Bangunsari Jaya', type: 'toko', typeLabel: 'Toko Sembako', desa: 'bangunsari', desaLabel: 'Desa Bangunsari', address: 'Jl. Bangunsari Raya', distance: '1.2 km', rating: 4.5, reviews: 52, status: 'open', img: '🛍️' },
-    { id: 10, name: 'Warung Bu Tini', type: 'warung', typeLabel: 'Warung Makan', desa: 'bangunsari', desaLabel: 'Desa Bangunsari', address: 'Jl. Bangunsari Tengah', distance: '1.4 km', rating: 4.6, reviews: 48, status: 'open', img: '🍳' },
-    { id: 11, name: 'Minimarket Bangunsari', type: 'supermarket', typeLabel: 'Minimarket', desa: 'bangunsari', desaLabel: 'Desa Bangunsari', address: 'Jl. Bangunsari No. 8', distance: '1.5 km', rating: 4.4, reviews: 67, status: 'open', img: '🏬' },
-    { id: 12, name: 'Toko Buah Segar', type: 'fresh', typeLabel: 'Buah Segar', desa: 'bangunsari', desaLabel: 'Desa Bangunsari', address: 'Jl. Bangunsari Market', distance: '1.6 km', rating: 4.3, reviews: 29, status: 'open', img: '🍎' },
-    { id: 13, name: 'Warung Bakso Pak Slamet', type: 'warung', typeLabel: 'Warung Bakso', desa: 'bangunsari', desaLabel: 'Desa Bangunsari', address: 'Jl. Bangunsari Selatan', distance: '1.8 km', rating: 4.7, reviews: 71, status: 'open', img: '🍜' },
-    { id: 103, name: 'SDN 1 Bangunsari', type: 'sekolah', typeLabel: 'SD Negeri', desa: 'bangunsari', desaLabel: 'Desa Bangunsari', address: 'Jl. Bangunsari Tengah', distance: '1.5 km', rating: 4.5, reviews: 87, status: 'open', img: '🏫' },
-    { id: 203, name: 'Driver Hub Bangunsari', type: 'driver', typeLabel: 'Driver Hub', desa: 'bangunsari', desaLabel: 'Desa Bangunsari', address: 'Jl. Bangunsari Raya No. 15', distance: '1.3 km', rating: 4.7, reviews: 145, status: 'online', img: '🚗' },
-    // JERUK
-    { id: 14, name: 'Toko Jeruk Makmur', type: 'toko', typeLabel: 'Toko Sembako', desa: 'jeruk', desaLabel: 'Desa Jeruk', address: 'Jl. Jeruk Raya', distance: '2.0 km', rating: 4.5, reviews: 45, status: 'open', img: '🛍️' },
-    { id: 15, name: 'Warung Bu Minah', type: 'warung', typeLabel: 'Warung Makan', desa: 'jeruk', desaLabel: 'Desa Jeruk', address: 'Jl. Jeruk Tengah', distance: '2.1 km', rating: 4.6, reviews: 56, status: 'open', img: '🍳' },
-    { id: 16, name: 'Warung Sate Pak Rahmat', type: 'warung', typeLabel: 'Warung Sate', desa: 'jeruk', desaLabel: 'Desa Jeruk', address: 'Jl. Jeruk Barat', distance: '2.3 km', rating: 4.7, reviews: 58, status: 'open', img: '🍢' },
-    { id: 104, name: 'SDN 1 Jeruk', type: 'sekolah', typeLabel: 'SD Negeri', desa: 'jeruk', desaLabel: 'Desa Jeruk', address: 'Jl. Jeruk Raya', distance: '2.2 km', rating: 4.5, reviews: 92, status: 'open', img: '🏫' },
-    { id: 204, name: 'Driver Hub Jeruk', type: 'driver', typeLabel: 'Driver Hub', desa: 'jeruk', desaLabel: 'Desa Jeruk', address: 'Jl. Jeruk Raya No. 20', distance: '2.1 km', rating: 4.7, reviews: 128, status: 'online', img: '🚗' },
-    // KLEDUNG
-    { id: 17, name: 'Toko Kledung Sejahtera', type: 'toko', typeLabel: 'Toko Sembako', desa: 'kledung', desaLabel: 'Desa Kledung', address: 'Jl. Kledung Raya', distance: '2.5 km', rating: 4.4, reviews: 42, status: 'open', img: '🛍️' },
-    { id: 18, name: 'Warung Bu Darmi', type: 'warung', typeLabel: 'Warung Makan', desa: 'kledung', desaLabel: 'Desa Kledung', address: 'Jl. Kledung Tengah', distance: '2.6 km', rating: 4.6, reviews: 44, status: 'open', img: '🍳' },
-    { id: 19, name: 'Minimarket Kledung', type: 'supermarket', typeLabel: 'Minimarket', desa: 'kledung', desaLabel: 'Desa Kledung', address: 'Jl. Kledung No. 10', distance: '2.7 km', rating: 4.5, reviews: 63, status: 'open', img: '🏬' },
-    { id: 20, name: 'Warung Mie Ayam Pak Joko', type: 'warung', typeLabel: 'Warung Mie', desa: 'kledung', desaLabel: 'Desa Kledung', address: 'Jl. Kledung Timur', distance: '2.8 km', rating: 4.7, reviews: 62, status: 'open', img: '🍜' },
-    { id: 105, name: 'SDN 1 Kledung', type: 'sekolah', typeLabel: 'SD Negeri', desa: 'kledung', desaLabel: 'Desa Kledung', address: 'Jl. Kledung Raya', distance: '2.7 km', rating: 4.5, reviews: 88, status: 'open', img: '🏫' },
-    { id: 205, name: 'Driver Hub Kledung', type: 'driver', typeLabel: 'Driver Hub', desa: 'kledung', desaLabel: 'Desa Kledung', address: 'Jl. Kledung Raya No. 18', distance: '2.6 km', rating: 4.7, reviews: 115, status: 'online', img: '🚗' },
-    // NGUNUT
-    { id: 21, name: 'Toko Fresh Sayur Ngunut', type: 'fresh', typeLabel: 'Sayur Segar', desa: 'ngunut', desaLabel: 'Desa Ngunut', address: 'Jl. Ngunut Market', distance: '3.0 km', rating: 4.4, reviews: 38, status: 'open', img: '🥬' },
-    { id: 22, name: 'Warung Bu Darmi Ngunut', type: 'warung', typeLabel: 'Warung Makan', desa: 'ngunut', desaLabel: 'Desa Ngunut', address: 'Jl. Ngunut Raya', distance: '3.1 km', rating: 4.6, reviews: 44, status: 'open', img: '🍳' },
-    { id: 23, name: 'Toko Kelontong Ngunut', type: 'toko', typeLabel: 'Toko Kelontong', desa: 'ngunut', desaLabel: 'Desa Ngunut', address: 'Jl. Ngunut Tengah No. 5', distance: '3.2 km', rating: 4.3, reviews: 31, status: 'open', img: '🛍️' },
-    { id: 109, name: 'SDN 2 Ngunut', type: 'sekolah', typeLabel: 'SD Negeri', desa: 'ngunut', desaLabel: 'Desa Ngunut', address: 'Jl. Ngunut Pendidikan', distance: '3.4 km', rating: 4.5, reviews: 75, status: 'open', img: '🏫' },
-    { id: 206, name: 'Driver Hub Ngunut', type: 'driver', typeLabel: 'Driver Hub', desa: 'ngunut', desaLabel: 'Desa Ngunut', address: 'Jl. Ngunut Tengah', distance: '3.2 km', rating: 4.6, reviews: 95, status: 'online', img: '🚗' },
-    // PETUNGSINARANG
-    { id: 24, name: 'Toko Petungsinarang Makmur', type: 'toko', typeLabel: 'Toko Sembako', desa: 'petungsinarang', desaLabel: 'Desa Petungsinarang', address: 'Jl. Petungsinarang Raya', distance: '3.5 km', rating: 4.5, reviews: 48, status: 'open', img: '🛍️' },
-    { id: 25, name: 'Warung Bu Sumi', type: 'warung', typeLabel: 'Warung Nasi', desa: 'petungsinarang', desaLabel: 'Desa Petungsinarang', address: 'Jl. Petungsinarang Barat', distance: '3.6 km', rating: 4.6, reviews: 48, status: 'open', img: '🍳' },
-    { id: 26, name: 'Minimarket Petungsinarang', type: 'supermarket', typeLabel: 'Minimarket', desa: 'petungsinarang', desaLabel: 'Desa Petungsinarang', address: 'Jl. Petungsinarang No. 12', distance: '3.7 km', rating: 4.5, reviews: 73, status: 'open', img: '🏬' },
-    { id: 111, name: 'SDN 1 Petungsinarang', type: 'sekolah', typeLabel: 'SD Negeri', desa: 'petungsinarang', desaLabel: 'Desa Petungsinarang', address: 'Jl. Petungsinarang Pendidikan', distance: '3.6 km', rating: 4.5, reviews: 80, status: 'open', img: '🏫' },
-    { id: 207, name: 'Driver Hub Petungsinarang', type: 'driver', typeLabel: 'Driver Hub', desa: 'petungsinarang', desaLabel: 'Desa Petungsinarang', address: 'Jl. Petungsinarang Raya No. 5', distance: '3.6 km', rating: 4.6, reviews: 88, status: 'online', img: '🚗' },
-    // TUMPUK
-    { id: 27, name: 'Toko Tumpuk Sejahtera', type: 'toko', typeLabel: 'Toko Sembako', desa: 'tumpuk', desaLabel: 'Desa Tumpuk', address: 'Jl. Tu
+function selectPayment(m,el){currentPaymentMethod=m;var cards=el.parentElement.querySelectorAll('.payment-method-card');for(var i=0;i<cards.length;i++)cards[i].classList.remove('selected');el.classList.add('selected')}
 
+function submitRealtimeOrder(type){
+    if(!currentUser){showToast('error','Login','Silakan login Google!');return}
+    var pk='',ds='',ph='',dt='';
+    if(type==='ride'){pk=document.getElementById('ridePickup').value;ds=document.getElementById('rideDestination').value;ph=document.getElementById('ridePhone').value}
+    else if(type==='food'){pk=document.getElementById('foodFrom').value;ds=document.getElementById('foodTo').value;ph=document.getElementById('foodPhone').value;dt=document.getElementById('foodDetail').value}
+    else if(type==='send'){pk=document.getElementById('sendFrom').value;ds=document.getElementById('sendTo').value;ph=document.getElementById('sendPhone').value;dt=document.getElementById('sendItemType').value}
+    if(!pk||!ds||!ph){showToast('warning','Data Kurang','Lengkapi semua data!');return}
+    showLoading(true);
+    var dist=currentRouteDistance>0?currentRouteDistance:2;
+    var b,pk2;
+    if(type==='ride'){b=appSettings.rideBase;pk2=appSettings.rideKm}else if(type==='food'){b=appSettings.foodBase;pk2=appSettings.foodKm}else{b=appSettings.sendBase;pk2=appSettings.sendKm}
+    var sub=b+Math.round(dist*pk2),com=Math.round(sub*(appSettings.commissionPercent/100)),tot=sub+com;
+    if(firebaseReady&&db){
+        var ref=db.ref('orders').push();lastOrderId=ref.key;
+        ref.set({type:type,pickup:pk,destination:ds,phone:ph,detail:dt||'',distance:dist,subtotal:sub,commission:com,commissionPercent:appSettings.commissionPercent,totalPrice:tot,userId:currentUser.uid,userName:currentUser.displayName,status:'pending',timestamp:firebase.database.ServerValue.TIMESTAMP,paymentMethod:currentPaymentMethod}).then(function(){
+            showLoading(false);closeServicePage(type);document.getElementById('successModal').classList.add('active');clearFields();loadOrders();
+        }).catch(function(err){showLoading(false);showToast('error','Gagal',err.message)});
+    } else {showLoading(false);showToast('error','Offline','Firebase tidak tersedia')}
+}
+
+function clearFields(){var ids=['ridePickup','rideDestination','ridePhone','foodFrom','foodTo','foodPhone','foodDetail','sendFrom','sendTo','sendPhone','sendItemType'];for(var i=0;i<ids.length;i++){var e=document.getElementById(ids[i]);if(e)e.value=''}}
+
+function acceptOrder(id,btn){
+    if(!firebaseReady||!db)return;
+    if(driverWalletBalance<appSettings.minDriverBalance){showToast('warning','Saldo Kurang','Min saldo: Rp '+appSettings.minDriverBalance.toLocaleString('id-ID'));return}
+    db.ref('orders/'+id).update({status:'accepted',driverId:'driverpinggir',driverName:'Driver Pinggir',acceptedAt:firebase.database.ServerValue.TIMESTAMP}).then(function(){
+        var p=btn.closest('.incoming-order');if(p)p.style.background='#E8F5E9';
+        var a=btn.closest('.incoming-order-actions');if(a)a.innerHTML='<span style="color:#4CAF50;font-weight:bold">\u2705 Diterima</span>';
+        driverOrderCount++;var e=document.getElementById('statOrders');if(e)e.textContent=driverOrderCount;
+        showToast('success','Diterima','Menuju lokasi penjemputan');
+    });
+}
+
+function declineOrder(id,btn){
+    if(!firebaseReady||!db)return;
+    db.ref('orders/'+id).update({status:'cancelled'}).then(function(){
+        var p=btn.closest('.incoming-order');if(p)p.style.opacity='0.5';
+        var a=btn.closest('.incoming-order-actions');if(a)a.innerHTML='<span style="color:#F44336">\u274C Ditolak</span>';
+    });
+}
+
+// ============================================================
+// ORDER HISTORY
+// ============================================================
+function loadOrders(){
+    if(!currentUser)return;
+    if(!firebaseReady||!db){renderHistory();return}
+    db.ref('orders').orderByChild('userId').equalTo(currentUser.uid).once('value',function(snap){
+        userOrders=[];
+        if(snap.exists()){snap.forEach(function(c){userOrders.push(Object.assign({id:c.key},c.val()))});userOrders.sort(function(a,b){return(b.timestamp||0)-(a.timestamp||0)})}
+        renderHistory();updateStats();
+    });
+}
+
+function renderHistory(){
+    var c=document.getElementById('orderHistoryList');if(!c)return;
+    var f=userOrders;if(currentOrderFilter!=='all')f=userOrders.filter(function(o){return o.status===currentOrderFilter});
+    if(f.length===0){c.innerHTML='<div class="empty-state"><div class="empty-state-icon">\u{1F4ED}</div><h3>Belum Ada Pesanan</h3><p>Pesanan muncul di sini setelah order.</p></div>';return}
+    var tl={ride:'\u{1F3CD}\uFE0F Antar Jemput',food:'\u{1F354} Antar Makanan',send:'\u{1F4E6} Antar Barang'};
+    var sl={pending:'Menunggu',accepted:'Diterima',completed:'Selesai',cancelled:'Dibatalkan'};
+    var h='';
+    for(var i=0;i<f.length;i++){var o=f[i];var dt=o.timestamp?new Date(o.timestamp).toLocaleString('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'Baru saja';
+        var ct=o.status==='pending'||o.status==='accepted';var cr=o.status==='completed'&&!o.rating;
+        h+='<div class="order-history-card '+o.status+'"><div class="order-history-header"><span class="order-history-type">'+(tl[o.type]||o.type)+'</span><span class="order-history-date">'+dt+'</span></div><div class="order-history-route">'+o.pickup+' \u2192 '+o.destination+'</div><div class="order-history-detail">\u{1F4DE} '+o.phone+(o.detail?' \u2022 '+o.detail:'')+'</div><div class="order-history-footer"><div class="order-history-price">Rp '+(o.totalPrice||0).toLocaleString('id-ID')+'</div><div class="order-history-status '+o.status+'">'+(sl[o.status]||o.status)+'</div></div>';
+        if(ct||cr){h+='<div class="order-history-actions">';if(ct)h+='<button class="order-action-btn track" onclick="openTracking(\''+o.id+'\')">\u{1F5FA}\uFE0F Lacak</button>';if(cr)h+='<button class="order-action-btn rate" onclick="openRatingModal(\''+o.id+'\')">\u2B50 Rating</button>';if(o.status==='pending')h+='<button class="order-action-btn cancel" onclick="cancelOrder(\''+o.id+'\')">Batal</button>';h+='</div>'}
+        h+='</div>';}
+    c.innerHTML=h;
+}
+
+function filterOrderStatus(s,el){currentOrderFilter=s;var t=document.querySelectorAll('#pageOrders .promo-tab');for(var i=0;i<t.length;i++)t[i].classList.remove('active');el.classList.add('active');renderHistory()}
+function cancelOrder(id){if(!confirm('Batalkan pesanan?'))return;if(!firebaseReady||!db)return;db.ref('orders/'+id).update({status:'cancelled'}).then(function(){showToast('success','Dibatalkan','Pesanan dibatalkan');loadOrders()})}
+function updateStats(){var e1=document.getElementById('profileTotalOrder');if(e1)e1.textContent=userOrders.length;var t=0;for(var i=0;i<userOrders.length;i++)t+=(userOrders[i].totalPrice||0);var e2=document.getElementById('profileTotalSpent');if(e2)e2.textContent=Math.round(t/1000)}
+
+// ============================================================
+// PROMO
+// ============================================================
+function renderPromoList(){var c=document.getElementById('promoListContainer');if(!c)return;var f=currentPromoFilter==='all'?allPromos:allPromos.filter(function(p){return p.category===currentPromoFilter});var h='';for(var i=0;i<f.length;i++){var p=f[i];h+='<div class="promo-list-item"><div class="promo-list-icon '+p.color+'">'+p.icon+'</div><div class="promo-list-info"><h4>'+p.title+'</h4><p>'+p.desc+'</p><div class="promo-list-meta"><span class="promo-list-timer">\u23F3 '+p.timer+'</span><span class="promo-list-code">'+p.code+'</span></div></div></div>'}c.innerHTML=h}
+function filterPromoCategory(c,el){currentPromoFilter=c;var t=document.querySelectorAll('#pagePromo .promo-tab');for(var i=0;i<t.length;i++)t[i].classList.remove('active');el.classList.add('active');renderPromoList()}
+
+// ============================================================
+// TRACKING
+// ============================================================
+function openTracking(id){var o=null;for(var i=0;i<userOrders.length;i++){if(userOrders[i].id===id){o=userOrders[i];break}}if(!o)return;var tl={ride:'\u{1F3CD}\uFE0F Antar Jemput',food:'\u{1F354} Antar Makanan',send:'\u{1F4E6} Antar Barang'};var e;e=document.getElementById('trackingOrderId');if(e)e.textContent='Order #'+id.substring(0,6).toUpperCase();e=document.getElementById('trackingOrderType');if(e)e.textContent=(tl[o.type]||'')+' \u2022 Rp '+(o.totalPrice||0).toLocaleString('id-ID');e=document.getElementById('trackingDriverName');if(e)e.textContent=o.driverName||'Driver Pinggir';var bg=document.getElementById('trackingStatusBadge');if(bg){if(o.status==='pending'){bg.innerHTML='\u{1F7E1} Menunggu';bg.style.background='rgba(255,193,7,0.3)'}else if(o.status==='accepted'){bg.innerHTML='\u{1F7E2} Dalam Perjalanan';bg.style.background='rgba(76,175,80,0.3)'}}e=document.getElementById('trackingTimeCreated');if(e)e.textContent=o.timestamp?new Date(o.timestamp).toLocaleString('id-ID'):'Baru saja';document.getElementById('pageTracking').classList.add('active');setTimeout(initTrackingMap,300)}
+
+// ============================================================
+// RATING
+// ============================================================
+function openRatingModal(id){currentRatingOrderId=id;currentRating=0;var s=document.querySelectorAll('.rating-star');for(var i=0;i<s.length;i++)s[i].classList.remove('active');var rc=document.getElementById('ratingComment');if(rc)rc.value='';document.getElementById('ratingModal').classList.add('active')}
+function setRating(v){currentRating=v;var s=document.querySelectorAll('.rating-star');for(var i=0;i<s.length;i++){var sv=parseInt(s[i].getAttribute('data-value'));if(sv<=v)s[i].classList.add('active');else s[i].classList.remove('active')}}
+function submitRating(){if(currentRating===0){showToast('warning','Rating','Pilih bintang!');return}if(!currentRatingOrderId||!firebaseReady||!db)return;var rc=document.getElementById('ratingComment');db.ref('orders/'+currentRatingOrderId).update({rating:currentRating,ratingComment:rc?rc.value:'',ratedAt:firebase.database.ServerValue.TIMESTAMP}).then(function(){showToast('success','Terima Kasih','Rating dikirim!');closeRatingModal();loadOrders()})}
+function closeRatingModal(){document.getElementById('ratingModal').classList.remove('active')}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function switchNav(page,el){var items=document.querySelectorAll('.nav-item');for(var i=0;i<items.length;i++)items[i].classList.remove('active');if(el)el.classList.add('active');if(page==='home'){closeAllPages()}else if(page==='orders'){if(!currentUser){showToast('warning','Login','Login dulu');return}loadOrders();openPage('orders')}else if(page==='promo'){renderPromoList();openPage('promo')}else if(page==='profile'){openPage('profile')}}
+function openPage(p){closeAllPages();var e=document.getElementById('page'+p.charAt(0).toUpperCase()+p.slice(1));if(e)e.classList.add('active')}
+function closePage(p){var e=document.getElementById('page'+p.charAt(0).toUpperCase()+p.slice(1));if(e)e.classList.remove('active')}
+function closeAllPages(){var cls=['service-page','login-page','dashboard-page','orders-page','promo-page','profile-page','tracking-page','belanja-page'];for(var c=0;c<cls.length;c++){var els=document.querySelectorAll('.'+cls[c]);for(var i=0;i<els.length;i++)els[i].classList.remove('active')}}
+function openServicePage(t){var e=document.getElementById('page'+t.charAt(0).toUpperCase()+t.slice(1));if(e)e.classList.add('active');setTimeout(function(){if(t==='ride'&&customerMap&&typeof google!=='undefined')google.maps.event.trigger(customerMap,'resize')},300)}
+function closeServicePage(t){var e=document.getElementById('page'+t.charAt(0).toUpperCase()+t.slice(1));if(e)e.classList.remove('active')}
+function closeSuccessAndTrack(){document.getElementById('successModal').classList.remove('active');if(lastOrderId){loadOrders();setTimeout(function(){openTracking(lastOrderId)},500)}}
+function openBelanja(){document.getElementById('belanjaPage').classList.add('active');renderStores()}
+function closeBelanja(){document.getElementById('belanjaPage').classList.remove('active')}
+
+// ============================================================
+// DRIVER & ADMIN
+// ============================================================
+function openDriverLogin(){document.getElementById('driverLoginPage').classList.add('active')}
+function closeDriverLogin(){document.getElementById('driverLoginPage').classList.remove('active')}
+function doDriverLogin(){var u=document.getElementById('driverUsername'),p=document.getElementById('driverPassword');if(u&&p&&u.value==='driverpinggir'&&p.value==='driver123'){closeDriverLogin();document.getElementById('driverDashboard').classList.add('active');var dn=document.getElementById('driverName');if(dn)dn.textContent='Driver Pinggir';listenForOrders();showToast('success','Login Driver','Selamat bertugas!')}else{var err=document.getElementById('driverLoginError');if(err)err.classList.add('show')}}
+function doDriverLogout(){if(confirm('Logout?'))document.getElementById('driverDashboard').classList.remove('active')}
+function closeDriverDashboard(){document.getElementById('driverDashboard').classList.remove('active')}
+function toggleDriverStatus(){isDriverOnline=!isDriverOnline;var t=document.getElementById('driverStatusToggle'),d=document.getElementById('statusDot'),tx=document.getElementById('statusText');if(t){t.classList.toggle('online',isDriverOnline);t.classList.toggle('offline',!isDriverOnline)}if(d){d.classList.toggle('online',isDriverOnline);d.classList.toggle('offline',!isDriverOnline)}if(tx)tx.textContent=isDriverOnline?'Online':'Offline';showToast('info','Status',isDriverOnline?'Online':'Offline')}
+function openAdminLogin(){document.getElementById('adminLoginPage').classList.add('active')}
+function closeAdminLogin(){document.getElementById('adminLoginPage').classList.remove('active')}
+function doAdminLogin(){var e=document.getElementById('adminEmail'),p=document.getElementById('adminPassword');if(e&&p&&e.value==='simpletutorial536@gmail.com'&&p.value==='admin123'){closeAdminLogin();document.getElementById('adminDashboard').classList.add('active');loadAdminSettings();showToast('success','Login Admin','Selamat datang!')}else{var err=document.getElementById('adminLoginError');if(err)err.classList.add('show')}}
+function doAdminLogout(){if(confirm('Logout?'))document.getElementById('adminDashboard').classList.remove('active')}
+function closeAdminDashboard(){document.getElementById('adminDashboard').classList.remove('active')}
+function closeSuccess(){document.getElementById('successModal').classList.remove('active')}
+function showLoading(s){var e=document.getElementById('loadingOverlay');if(e)e.classList.toggle('active',s)}
+
+// ============================================================
+// BELANJA
+// ============================================================
+function renderStores(){var c=document.getElementById('storeList');if(!c)return;var f=allPlaces;if(currentDesa!=='semua')f=f.filter(function(p){return p.desa===currentDesa});if(currentCategory!=='semua')f=f.filter(function(p){return p.type===currentCategory});if(currentSearch){var s=currentSearch.toLowerCase();f=f.filter(function(p){return p.name.toLowerCase().indexOf(s)>=0||p.typeLabel.toLowerCase().indexOf(s)>=0||p.desaLabel.toLowerCase().indexOf(s)>=0})}var sc=document.getElementById('storeCount');if(sc)sc.textContent='('+f.length+' tempat)';var h='';for(var i=0;i<f.length;i++){var pl=f[i];h+='<div class="store-card"><div class="store-img '+pl.type+'">'+pl.img+'</div><div class="store-info"><h4>'+pl.name+'</h4><span class="store-type">'+pl.typeLabel+'</span><div class="store-address">'+pl.address+', '+pl.desaLabel+'</div><div class="store-meta"><span class="store-rating">\u2B50 '+pl.rating+' ('+pl.reviews+')</span><span class="store-distance">\u{1F4CD} '+pl.distance+'</span><span class="store-status '+pl.status+'">'+(pl.status==='open'||pl.status==='online'?'Buka':'Tutup')+'</span></div></div><button class="store-order-btn" onclick="orderFromStore(\''+pl.name.replace(/'/g,"\\'")+'\')">Pesan</button></div>'}c.innerHTML=h}
+function filterDesa(d,el){currentDesa=d;var c=document.querySelectorAll('.desa-chip');for(var i=0;i<c.length;i++)c[i].classList.remove('active');el.classList.add('active');renderStores()}
+function filterCategory(c,el){currentCategory=c;var ch=document.querySelectorAll('.category-chip');for(var i=0;i<ch.length;i++)ch[i].classList.remove('active');el.classList.add('active');renderStores()}
+function searchStores(v){currentSearch=v;renderStores()}
+function orderFromStore(n){if(!currentUser){showToast('warning','Login','Login dulu!');return}showToast('info','Segera Hadir','Pemesanan dari '+n+' segera tersedia!')}
+
+// ============================================================
+// ADMIN SETTINGS
+// ============================================================
+function saveAdminSettingsToDB(){if(!firebaseReady||!db){showToast('error','Offline','Firebase tidak tersedia');return}showLoading(true);var ns={rideBase:parseInt(document.getElementById('adminRideBase').value)||6000,rideKm:parseInt(document.getElementById('adminRideKm').value)||2000,foodBase:parseInt(document.getElementById('adminFoodBase').value)||8000,foodKm:parseInt(document.getElementById('adminFoodKm').value)||2500,sendBase:parseInt(document.getElementById('adminSendBase').value)||10000,sendKm:parseInt(document.getElementById('adminSendKm').value)||3000,commissionPercent:parseInt(document.getElementById('adminCommissionPercent').value)||10,minDriverBalance:parseInt(document.getElementById('adminMinDriverBalance').value)||10000,qrisMerchant:document.getElementById('adminQrisMerchant').value.trim()||'BOLO DEWE CENTER',qrisNmid:document.getElementById('adminQrisNmid').value.trim()||'ID1026513619555'};db.ref('settings').set(ns).then(function(){showLoading(false);showToast('success','Tersimpan','Pengaturan disimpan!');updateUI()}).catch(function(e){showLoading(false);showToast('error','Gagal',e.message)})}
+function loadAdminSettings(){if(!firebaseReady||!db)return;db.ref('settings').once('value').then(function(s){if(s.exists()){var v=s.val();var f={adminRideBase:v.rideBase||6000,adminRideKm:v.rideKm||2000,adminFoodBase:v.foodBase||8000,adminFoodKm:v.foodKm||2500,adminSendBase:v.sendBase||10000,adminSendKm:v.sendKm||3000,adminCommissionPercent:v.commissionPercent||10,adminMinDriverBalance:v.minDriverBalance||10000,adminQrisMerchant:v.qrisMerchant||'BOLO DEWE CENTER',adminQrisNmid:v.qrisNmid||'ID1026513619555'};for(var k in f){var e=document.getElementById(k);if(e)e.value=f[k]}}});db.ref('stats/totalCommission').once('value').then(function(s){var e=document.getElementById('adminTotalCommission');if(e)e.textContent='Rp '+(s.val()||0).toLocaleString('id-ID')})}
+function openTopUpWallet(){document.getElementById('topUpModal').classList.add('active')}
+function closeTopUpModal(){document.getElementById('topUpModal').classList.remove('active')}
+function confirmTopUp(){var ae=document.getElementById('topUpAmount');var a=ae?parseInt(ae.value):0;if(!a||a<10000){showToast('warning','Jumlah','Min Rp 10.000');return}if(!firebaseReady||!db){showToast('error','Offline','Firebase tidak tersedia');return}showLoading(true);var nb=driverWalletBalance+a;db.ref('drivers/driverpinggir/wallet').update({balance:nb,lastUpdated:firebase.database.ServerValue.TIMESTAMP}).then(function(){db.ref('drivers/driverpinggir/transactions').push({type:'topup',amount:a,description:'Top up via QRIS',timestamp:firebase.database.ServerValue.TIMESTAMP});showLoading(false);closeTopUpModal();if(ae)ae.value='';showToast('success','Top Up Berhasil','Saldo: Rp '+nb.toLocaleString('id-ID'))}).catch(function(e){showLoading(false);showToast('error','Gagal',e.message)})}
+function showTransactionHistory(){if(!firebaseReady||!db){showToast('info','Riwayat','Firebase tidak tersedia');return}db.ref('drivers/driverpinggir/transactions').orderByChild('timestamp').limitToLast(20).once('value',function(s){if(!s.exists()){showToast('info','Riwayat','Belum ada transaksi');return}var t='\u{1F4CB} Riwayat:\n\n';s.forEach(function(c){var tx=c.val();var d=new Date(tx.timestamp).toLocaleString('id-ID');var sg=tx.type==='topup'?'+':'-';t+=tx.description+'\n'+sg+'Rp '+(tx.amount||0).toLocaleString('id-ID')+'\n'+d+'\n\n'});alert(t)})}
+
+// ============================================================
+// INIT
+// ============================================================
+window.onload = function() {
+    checkSavedUser();
+    updateUI();
+    renderPromoList();
+    setInterval(function(){var e=document.getElementById('currentTime');if(e)e.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})},1000);
+    console.log('JEK-PING Loaded! Firebase:'+(firebaseReady?'OK':'FAIL')+' Maps:'+(mapsReady?'OK':'WAIT'));
+};
