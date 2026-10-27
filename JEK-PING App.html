@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JEK-PING - Solusi Antar Jemput & Layanan Harian Kecamatan Bandar</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            pink: '#ec4899',
+                            pinkDark: '#db2777'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .ping-pulse {
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.5); }
+            70% { box-shadow: 0 0 0 10px rgba(236, 72, 153, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800 antialiased min-h-screen flex flex-col justify-between select-none">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-gradient-to-r from-emerald-600 to-pink-500 text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-2 cursor-pointer" onclick="switchView('home')">
+                <div class="bg-white text-pink-600 font-black text-xl px-2.5 py-1 rounded-xl shadow">JP</div>
+                <div>
+                    <h1 class="font-extrabold text-lg tracking-wider leading-tight">JEK-PING</h1>
+                    <p class="text-[10px] text-pink-100 -mt-1 font-medium">Layanan Ojek & Kurir Kecamatan Bandar</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <!-- Status User / Admin / Driver Badge -->
+                <div id="user-role-badge" class="hidden text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">
+                    USER
+                </div>
+                <button onclick="handleAccountButtonClick()" title="Akun & Profil" class="p-2 text-white hover:bg-white/10 rounded-full transition relative">
+                    <i class="fa-solid fa-circle-user text-xl"></i>
+                </button>
+                <button onclick="toggleNotificationsModal()" class="relative p-2 text-white hover:bg-white/10 rounded-full transition">
+                    <i class="fa-solid fa-bell text-lg"></i>
+                    <span id="unread-notif-dot" class="absolute top-1 right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full border-2 border-emerald-600"></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Mobile Container -->
+    <main class="max-w-md mx-auto w-full bg-gray-50 flex-1 min-h-[calc(100vh-120px)] shadow-xl relative pb-20 overflow-x-hidden">
+
+        <!-- VIEW 1: HOME DASHBOARD -->
+        <section id="view-home" class="p-4 space-y-5">
+            <!-- Saldo & Promo Card -->
+            <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-gray-900 text-white p-4 rounded-2xl shadow-lg relative overflow-hidden">
+                <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-pink-500/20 rounded-full blur-xl"></div>
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <p class="text-xs text-gray-400 font-medium">Saldo PingPay</p>
+                        <h3 id="display-user-balance" class="text-2xl font-bold tracking-tight text-emerald-400">Rp 0</h3>
+                    </div>
+                    <button onclick="openTopUpModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-3.5 py-2 rounded-xl font-semibold shadow transition flex items-center space-x-1 active:scale-95">
+                        <i class="fa-solid fa-wallet"></i>
+                        <span>Isi Saldo</span>
+                    </button>
+                </div>
+                <div class="grid grid-cols-3 gap-2 border-t border-gray-700/60 pt-3 text-center text-xs text-gray-300">
+                    <div class="cursor-pointer hover:text-emerald-400 transition" onclick="openTopUpModal()">
+                        <i class="fa-solid fa-paper-plane text-emerald-400 mb-1 block text-base"></i> Transfer
+                    </div>
+                    <div class="cursor-pointer hover:text-emerald-400 transition" onclick="openHistoryModal()">
+                        <i class="fa-solid fa-clock-rotate-left text-emerald-400 mb-1 block text-base"></i> Riwayat
+                    </div>
+                    <div class="cursor-pointer hover:text-emerald-400 transition" onclick="applyPromo()">
+                        <i class="fa-solid fa-ticket text-emerald-400 mb-1 block text-base"></i> Promo
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coverage Info Banner -->
+            <div class="bg-emerald-50 border border-emerald-200 text-emerald-900 p-3 rounded-2xl shadow-sm space-y-1">
+                <div class="flex items-center space-x-2 font-bold text-xs">
+                    <i class="fa-solid fa-map-location-dot text-emerald-600 text-sm"></i>
+                    <span>Cakupan Layanan: Kec. Bandar</span>
+                </div>
+                <p class="text-[11px] text-emerald-700 leading-snug">
+                    Mencakup 8 Desa: <b>Bandar, Bangunsari, Jeruk, Kledung, Ngunut, Petungsinarang, Tumpuk, Watupatok</b>.
+                </p>
+            </div>
+
+            <!-- Banner Highlight -->
+            <div class="bg-gradient-to-r from-pink-500 to-rose-500 text-white p-3.5 rounded-2xl shadow-sm flex items-center justify-between">
+                <div class="space-y-1">
+                    <span class="bg-white/20 text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full">PROMO HEMAT</span>
+                    <h4 class="font-bold text-sm">Naik JEK-PING Lebih Hemat!</h4>
+                    <p class="text-xs text-pink-100">Gunakan kode voucher: <span class="font-mono bg-black/20 px-1.5 py-0.5 rounded">PINGBANDAR</span></p>
+                </div>
+                <i class="fa-solid fa-bolt text-3xl opacity-80 text-yellow-300 transform -rotate-12"></i>
+            </div>
+
+            <!-- Main Services Grid -->
+            <div>
+                <h3 class="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">Layanan Utama</h3>
+                <div class="grid grid-cols-4 gap-3">
+                    <button onclick="openService('jemput')" class="bg-white p-3 rounded-2xl shadow-sm hover:shadow-md border border-gray-100 flex flex-col items-center justify-center group transition active:scale-95">
+                        <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-xl mb-2 group-hover:bg-emerald-600 group-hover:text-white transition">
+                            <i class="fa-solid fa-motorcycle"></i>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-700 text-center leading-tight">Antar<br>Jemput</span>
+                    </button>
+
+                    <button onclick="openService('barang')" class="bg-white p-3 rounded-2xl shadow-sm hover:shadow-md border border-gray-100 flex flex-col items-center justify-center group transition active:scale-95">
+                        <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-xl mb-2 group-hover:bg-blue-600 group-hover:text-white transition">
+                            <i class="fa-solid fa-box-archive"></i>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-700 text-center leading-tight">Antar<br>Barang</span>
+                    </button>
+
+                    <button onclick="openService('belanja')" class="bg-white p-3 rounded-2xl shadow-sm hover:shadow-md border border-gray-100 flex flex-col items-center justify-center group transition active:scale-95">
+                        <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-xl mb-2 group-hover:bg-amber-600 group-hover:text-white transition">
+                            <i class="fa-solid fa-cart-shopping"></i>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-700 text-center leading-tight">Jasa<br>Belanja</span>
+                    </button>
+
+                    <button onclick="openService('kuliner')" class="bg-white p-3 rounded-2xl shadow-sm hover:shadow-md border border-gray-100 flex flex-col items-center justify-center group transition active:scale-95">
+                        <div class="w-12 h-12 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center text-xl mb-2 group-hover:bg-pink-600 group-hover:text-white transition">
+                            <i class="fa-solid fa-utensils"></i>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-700 text-center leading-tight">Makanan &<br>Minuman</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Rekomendasi Tempat Local & Kuliner Terdekat -->
+            <div>
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Resto & Warung Bandar</h3>
+                    <button onclick="openService('kuliner')" class="text-xs font-semibold text-pink-600 hover:underline">Lihat Semua</button>
+                </div>
+                <div class="flex space-x-3 overflow-x-auto hide-scrollbar pb-2">
+                    <div onclick="openMerchantDetails('Warung Bu Siti - Bandar', 'kuliner')" class="min-w-[160px] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md transition">
+                        <img src="https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=300&q=80" alt="Nasi Goreng" class="w-full h-24 object-cover">
+                        <div class="p-2.5">
+                            <h4 class="font-bold text-xs truncate">Warung Bu Siti</h4>
+                            <p class="text-[10px] text-gray-500">Desa Bandar • <i class="fa-solid fa-star text-yellow-400"></i> 4.8</p>
+                            <p class="text-xs font-bold text-emerald-600 mt-1">Rp 12.000</p>
+                        </div>
+                    </div>
+                    <div onclick="openMerchantDetails('Kedai Kopi Watupatok', 'kuliner')" class="min-w-[160px] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md transition">
+                        <img src="https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&w=300&q=80" alt="Kopi" class="w-full h-24 object-cover">
+                        <div class="p-2.5">
+                            <h4 class="font-bold text-xs truncate">Kedai Watupatok</h4>
+                            <p class="text-[10px] text-gray-500">Desa Watupatok • <i class="fa-solid fa-star text-yellow-400"></i> 4.9</p>
+                            <p class="text-xs font-bold text-emerald-600 mt-1">Rp 8.000</p>
+                        </div>
+                    </div>
+                    <div onclick="openMerchantDetails('Ayam Geprek Bangunsari', 'kuliner')" class="min-w-[160px] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md transition">
+                        <img src="https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=300&q=80" alt="Ayam Geprek" class="w-full h-24 object-cover">
+                        <div class="p-2.5">
+                            <h4 class="font-bold text-xs truncate">Geprek Bangunsari</h4>
+                            <p class="text-[10px] text-gray-500">Desa Bangunsari • <i class="fa-solid fa-star text-yellow-400"></i> 4.7</p>
+                            <p class="text-xs font-bold text-emerald-600 mt-1">Rp 15.000</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: ORDER FORM & MAP -->
+        <section id="view-order" class="hidden">
+            <!-- Simulated Map Area -->
+            <div class="relative w-full h-52 bg-slate-900 overflow-hidden">
+                <canvas id="live-map-canvas" class="w-full h-full"></canvas>
+
+                <button onclick="switchView('home')" class="absolute top-3 left-3 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md text-gray-700 hover:bg-white z-10">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+            </div>
+
+            <!-- Service Header -->
+            <div class="p-4 bg-white border-b border-gray-100 flex items-center justify-between">
+                <div>
+                    <h2 id="service-title" class="text-lg font-extrabold text-gray-800">Antar Jemput</h2>
+                    <p id="service-desc" class="text-xs text-gray-500">Ojek online cepat & aman antar desa di Kec. Bandar</p>
+                </div>
+                <div id="service-icon-badge" class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-motorcycle"></i>
+                </div>
+            </div>
+
+            <!-- Dynamic Inputs -->
+            <div class="p-4 space-y-4">
+                <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-gray-100 space-y-3">
+                    <!-- Pickup Select / Input -->
+                    <div>
+                        <div class="flex items-center space-x-2 mb-1">
+                            <i class="fa-solid fa-circle-dot text-emerald-500 text-xs"></i>
+                            <label class="text-[11px] font-bold text-gray-600">Pilih Desa Penjemputan</label>
+                        </div>
+                        <select id="select-pickup-village" onchange="updateLocationDetails()" class="w-full text-xs font-semibold text-gray-700 bg-gray-50 p-2 rounded-lg border border-gray-200 focus:outline-none focus:border-emerald-500 mb-2">
+                            <option value="Desa Bandar">Desa Bandar</option>
+                            <option value="Desa Bangunsari">Desa Bangunsari</option>
+                            <option value="Desa Jeruk">Desa Jeruk</option>
+                            <option value="Desa Kledung">Desa Kledung</option>
+                            <option value="Desa Ngunut">Desa Ngunut</option>
+                            <option value="Desa Petungsinarang">Desa Petungsinarang</option>
+                            <option value="Desa Tumpuk">Desa Tumpuk</option>
+                            <option value="Desa Watupatok">Desa Watupatok</option>
+                        </select>
+                        <input type="text" id="input-pickup" placeholder="Detail Lokasi / Nama Jalan / RT RW / Patokan" onchange="validateAreaCoverage()" class="w-full text-xs text-gray-700 bg-gray-50 p-2 rounded-lg border border-gray-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+
+                    <div class="border-t border-gray-100 pt-2">
+                        <div class="flex items-center space-x-2 mb-1">
+                            <i class="fa-solid fa-location-dot text-pink-500 text-xs"></i>
+                            <label class="text-[11px] font-bold text-gray-600">Pilih Desa Tujuan</label>
+                        </div>
+                        <select id="select-dest-village" onchange="updateLocationDetails()" class="w-full text-xs font-semibold text-gray-700 bg-gray-50 p-2 rounded-lg border border-gray-200 focus:outline-none focus:border-pink-500 mb-2">
+                            <option value="Desa Watupatok">Desa Watupatok</option>
+                            <option value="Desa Bandar">Desa Bandar</option>
+                            <option value="Desa Bangunsari">Desa Bangunsari</option>
+                            <option value="Desa Jeruk">Desa Jeruk</option>
+                            <option value="Desa Kledung">Desa Kledung</option>
+                            <option value="Desa Ngunut">Desa Ngunut</option>
+                            <option value="Desa Petungsinarang">Desa Petungsinarang</option>
+                            <option value="Desa Tumpuk">Desa Tumpuk</option>
+                        </select>
+                        <input type="text" id="input-destination" placeholder="Detail Tujuan / Sekolah / RT RW / Patokan" onchange="validateAreaCoverage()" class="w-full text-xs text-gray-700 bg-gray-50 p-2 rounded-lg border border-gray-200 focus:outline-none focus:border-pink-500">
+                    </div>
+                </div>
+
+                <!-- Alert Wilayah Diluar Jangkauan -->
+                <div id="area-out-of-range-alert" class="hidden bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-2xl text-xs space-y-1">
+                    <div class="flex items-center space-x-2 font-bold">
+                        <i class="fa-solid fa-triangle-exclamation text-rose-500 text-sm"></i>
+                        <span>Alamat Di Luar Area Layanan!</span>
+                    </div>
+                    <p class="text-[11px] text-rose-600">JEK-PING saat ini khusus beroperasi di wilayah: <span id="display-allowed-areas" class="font-bold underline">Kecamatan Bandar (8 Desa)</span>.</p>
+                </div>
+
+                <div id="extra-inputs" class="bg-white p-3.5 rounded-2xl shadow-sm border border-gray-100 space-y-3 hidden">
+                    <div id="field-item-name">
+                        <label class="block text-[11px] font-bold text-gray-500 mb-1">Daftar Item / Rincian Barang</label>
+                        <input type="text" id="input-item-detail" placeholder="Contoh: Titip dokumen / Sembako di Warung Pak Eko" class="w-full text-xs text-gray-700 bg-gray-50 p-2 rounded-lg border border-gray-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div id="field-notes">
+                        <label class="block text-[11px] font-bold text-gray-500 mb-1">Catatan Tambahan untuk Driver</label>
+                        <textarea id="input-notes" rows="2" placeholder="Petunjuk patokan rumah, gang kecil, nomor HP penerima" class="w-full text-xs text-gray-700 bg-gray-50 p-2 rounded-lg border border-gray-200 focus:outline-none focus:border-emerald-500"></textarea>
+                    </div>
+                </div>
+
+                <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-gray-100 space-y-3">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-gray-500 font-medium">Metode Pembayaran</span>
+                        <select id="payment-method" class="font-bold text-emerald-600 bg-emerald-50 p-1.5 rounded-lg border-0 cursor-pointer focus:ring-0">
+                            <option value="PingPay">PingPay (Rp <span class="val-user-balance">0</span>)</option>
+                            <option value="Tunai">Tunai / Cash</option>
+                        </select>
+                    </div>
+                    <div class="border-t border-gray-100 pt-2 flex items-center justify-between text-xs">
+                        <span class="text-gray-500 font-medium"><i class="fa-solid fa-ticket text-pink-500 mr-1"></i> Promo JEK-PING</span>
+                        <button onclick="applyPromo()" class="text-pink-600 font-bold hover:underline">Gunakan Voucher</button>
+                    </div>
+                </div>
+
+                <div class="bg-emerald-50/50 border border-emerald-100 p-3.5 rounded-2xl space-y-1.5 text-xs">
+                    <div class="flex justify-between text-gray-600">
+                        <span>Estimasi Jarak Inter-Desa</span>
+                        <span class="font-semibold text-gray-800">3.2 km</span>
+                    </div>
+                    <div class="flex justify-between text-gray-600">
+                        <span>Biaya Layanan Antar Desa</span>
+                        <span id="price-base" class="font-semibold text-gray-800">Rp 10.000</span>
+                    </div>
+                    <div class="flex justify-between text-gray-600">
+                        <span>Biaya Penanganan</span>
+                        <span class="font-semibold text-gray-800">Rp 1.000</span>
+                    </div>
+                    <div id="row-discount" class="flex justify-between text-pink-600 hidden">
+                        <span>Diskon Promo Bandar (50%)</span>
+                        <span id="price-discount" class="font-bold">-Rp 5.500</span>
+                    </div>
+                    <div class="border-t border-emerald-200/60 pt-2 flex justify-between items-center text-sm font-extrabold text-gray-900">
+                        <span>Total Pembayaran</span>
+                        <span id="price-total" class="text-base text-emerald-600">Rp 11.000</span>
+                    </div>
+                </div>
+
+                <button onclick="startOrderProcess()" class="w-full bg-gradient-to-r from-emerald-600 to-pink-500 hover:from-emerald-700 hover:to-pink-600 text-white font-bold py-3.5 rounded-2xl shadow-lg transition transform active:scale-98 flex items-center justify-center space-x-2">
+                    <span>PESAN JEK-PING SEKARANG</span>
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- VIEW 3: LIVE TRACKING / SEARCHING DRIVER -->
+        <section id="view-tracking" class="hidden p-4 space-y-4">
+            <div class="relative w-full h-48 bg-slate-900 rounded-2xl overflow-hidden shadow-inner">
+                <canvas id="tracking-map-canvas" class="w-full h-full"></canvas>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl shadow-md border border-gray-100 text-center space-y-4">
+                <div id="status-spinner" class="relative w-16 h-16 mx-auto flex items-center justify-center">
+                    <div class="absolute inset-0 rounded-full border-4 border-pink-100 border-t-pink-500 animate-spin"></div>
+                    <div class="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-white text-lg ping-pulse">
+                        <i class="fa-solid fa-motorcycle"></i>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 id="tracking-status-title" class="text-lg font-bold text-gray-800">Mencari Driver JEK-PING...</h3>
+                    <p id="tracking-status-desc" class="text-xs text-gray-500 mt-1">Sistem kami mencari driver terdekat di area Desa Bandar & sekitarnya.</p>
+                </div>
+
+                <div id="driver-info-card" class="bg-gray-50 p-3.5 rounded-xl border border-gray-200 text-left hidden space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-emerald-100 text-emerald-700 font-bold text-lg rounded-full flex items-center justify-center border-2 border-emerald-500">
+                                <i class="fa-solid fa-user-ninja"></i>
+                            </div>
+                            <div>
+                                <h4 id="assigned-driver-name" class="font-bold text-xs text-gray-800">Driver JEK-PING</h4>
+                                <p id="assigned-driver-plate" class="text-[10px] text-gray-500">Motor Resmi • Kec. Bandar</p>
+                                <div class="flex items-center space-x-1 text-[10px] text-amber-500 mt-0.5">
+                                    <i class="fa-solid fa-star"></i>
+                                    <span class="font-bold text-gray-700">5.0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="showToast('Menghubungi Driver...')" class="w-9 h-9 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow hover:bg-emerald-600 active:scale-95">
+                                <i class="fa-solid fa-phone text-xs"></i>
+                            </button>
+                            <button onclick="openChatModal()" class="w-9 h-9 bg-pink-500 text-white rounded-full flex items-center justify-center shadow hover:bg-pink-600 active:scale-95 relative">
+                                <i class="fa-solid fa-comment text-xs"></i>
+                                <span id="chat-badge" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-300 rounded-full border border-pink-600"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="btn-cancel-order" onclick="cancelOrder()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2.5 rounded-xl text-xs transition">
+                    Batalkan Pesanan
+                </button>
+            </div>
+        </section>
+
+        <!-- VIEW 4: PANEL ADMIN (MANAGEMENT DASHBOARD) -->
+        <section id="view-admin" class="hidden p-4 space-y-5">
+            <div class="flex justify-between items-center bg-slate-900 text-white p-4 rounded-2xl shadow">
+                <div>
+                    <h2 class="text-base font-extrabold flex items-center gap-2">
+                        <i class="fa-solid fa-user-shield text-amber-400"></i> Admin Kec. Bandar
+                    </h2>
+                    <p class="text-[11px] text-slate-400">Pengaturan Wilayah & Sistem Pembayaran</p>
+                </div>
+                <button onclick="logoutRole()" class="bg-red-500/20 text-red-300 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded-xl text-xs font-semibold transition">
+                    <i class="fa-solid fa-right-from-bracket mr-1"></i> Keluar
+                </button>
+            </div>
+
+            <!-- Admin Stats Cards -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-sm">
+                    <p class="text-[11px] text-gray-500 font-medium">Total Pesanan</p>
+                    <h3 id="stat-total-orders" class="text-lg font-bold text-gray-800 mt-0.5">0</h3>
+                    <span class="text-[10px] text-emerald-600 font-semibold"><i class="fa-solid fa-check-circle"></i> Sistem Aktif</span>
+                </div>
+                <div class="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-sm">
+                    <p class="text-[11px] text-gray-500 font-medium">Mitra Terdaftar</p>
+                    <h3 id="stat-total-users" class="text-lg font-bold text-emerald-600 mt-0.5">0</h3>
+                    <span class="text-[10px] text-gray-400 font-medium">Pengguna & Driver</span>
+                </div>
+            </div>
+
+            <!-- KELOLA QRIS & METODE PEMBAYARAN -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-3">
+                <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                    <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-qrcode text-emerald-600"></i> Kelola Pembayaran QRIS Admin
+                    </h3>
+                    <span class="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">Aktif</span>
+                </div>
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-600 mb-1">URL Gambar Kode QRIS:</label>
+                        <input type="text" id="admin-qris-url" class="w-full text-xs p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 font-mono" placeholder="https://..." value="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=JEKPING-BANDAR-OFFICIAL-QRIS">
+                        <p class="text-[10px] text-gray-400 mt-1">Masukkan link gambar QRIS resmi toko / merchant Anda.</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-600 mb-1">Nama Pemilik / Merchant:</label>
+                            <input type="text" id="admin-qris-name" class="w-full text-xs p-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 font-semibold" value="JEK-PING BANDAR OFFICIAL">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-600 mb-1">No. Rekening / VA Backup:</label>
+                            <input type="text" id="admin-qris-rekening" class="w-full text-xs p-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 font-mono" value="0812-3456-7890 (BCA/DANA)">
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 pt-1">
+                        <button onclick="saveQrisSettings()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl text-xs shadow transition">
+                            <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan Pengaturan QRIS
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pengaturan Pembatasan Wilayah Operasional -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-3">
+                <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                    <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-map-location-dot text-pink-500"></i> Cakupan Desa Operasional
+                    </h3>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="toggle-geofence" onchange="toggleGeofencingSetting()" class="sr-only peer" checked>
+                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                    </label>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-[11px] font-bold text-gray-600">Daftar Desa Ter-cover (Pisahkan dengan koma):</label>
+                    <textarea id="admin-input-allowed-areas" rows="3" class="w-full text-xs p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 font-medium">Desa Bandar, Desa Bangunsari, Desa Jeruk, Desa Kledung, Desa Ngunut, Desa Petungsinarang, Desa Tumpuk, Desa Watupatok</textarea>
+                    <button onclick="saveGeofenceSettings()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow transition">
+                        Simpan Area Layanan
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider">Daftar Transaksi Terbaru</h3>
+                    <span class="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">Realtime</span>
+                </div>
+                <div id="admin-orders-list" class="space-y-3"></div>
+            </div>
+        </section>
+
+        <!-- VIEW 5: PANEL DRIVER (DRIVER APP DASHBOARD) -->
+        <section id="view-driver" class="hidden p-4 space-y-4">
+            <div class="bg-gradient-to-r from-emerald-700 to-teal-800 text-white p-4 rounded-2xl shadow-lg space-y-3">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 bg-white text-emerald-700 rounded-full font-bold flex items-center justify-center text-xl shadow border-2 border-amber-300">
+                            <i class="fa-solid fa-id-card"></i>
+                        </div>
+                        <div>
+                            <h2 id="driver-profile-name" class="text-sm font-bold flex items-center gap-1.5">
+                                Driver <i class="fa-solid fa-circle-check text-emerald-300 text-xs"></i>
+                            </h2>
+                            <p id="driver-profile-area" class="text-[11px] text-emerald-100">Area: Kec. Bandar</p>
+                        </div>
+                    </div>
+                    <button onclick="logoutRole()" class="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl text-xs font-semibold transition">
+                        Keluar
+                    </button>
+                </div>
+
+                <div class="bg-black/20 p-2.5 rounded-xl flex justify-between items-center">
+                    <div class="flex items-center space-x-2">
+                        <span id="driver-status-dot" class="w-3 h-3 bg-emerald-400 rounded-full animate-pulse"></span>
+                        <span id="driver-status-text" class="text-xs font-bold text-emerald-300">STATUS: ONLINE (Siap Terima Order)</span>
+                    </div>
+                    <button id="btn-toggle-driver" onclick="toggleDriverOnline()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] px-3 py-1 rounded-lg font-bold shadow transition">
+                        ONLINE
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-sm">
+                    <p class="text-[11px] text-gray-500 font-medium">Pendapatan Hari Ini</p>
+                    <h3 id="driver-income" class="text-lg font-extrabold text-emerald-600 mt-0.5">Rp 0</h3>
+                    <span id="driver-completed-count" class="text-[10px] text-gray-400">0 Pesanan Selesai</span>
+                </div>
+                <div class="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-sm">
+                    <p class="text-[11px] text-gray-500 font-medium">Rating Driver</p>
+                    <h3 class="text-lg font-extrabold text-amber-500 mt-0.5 flex items-center gap-1">
+                        5.0 <i class="fa-solid fa-star text-sm"></i>
+                    </h3>
+                    <span class="text-[10px] text-gray-400">Performa Baik</span>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider">Pesanan Masuk & Aktif</h3>
+                    <span id="driver-order-count" class="text-[10px] bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded-full">0 Order</span>
+                </div>
+                <div id="driver-orders-list" class="space-y-3"></div>
+            </div>
+        </section>
+
+        <!-- VIEW 6: USER PROFILE PAGE -->
+        <section id="view-profile" class="hidden p-4 space-y-4">
+            <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 text-center space-y-3 relative">
+                <div class="w-20 h-20 bg-gradient-to-tr from-emerald-500 to-pink-500 text-white rounded-full mx-auto flex items-center justify-center text-3xl font-bold shadow-md">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <div>
+                    <h3 id="profile-name" class="text-lg font-bold text-gray-800">Pengguna JEK-PING</h3>
+                    <p id="profile-email" class="text-xs text-gray-500">user@email.com</p>
+                    <p id="profile-phone" class="text-xs text-emerald-600 font-semibold mt-0.5">0812-3456-7890</p>
+                </div>
+                <div class="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold px-3 py-1 rounded-full uppercase">
+                    Peran: <span id="profile-role">USER</span>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100 text-xs">
+                <button onclick="openTopUpModal()" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-wallet text-emerald-600 text-base"></i>
+                        <span class="font-semibold text-gray-700">Saldo PingPay</span>
+                    </div>
+                    <span id="profile-balance" class="font-bold text-emerald-600">Rp 0</span>
+                </button>
+                <button onclick="openHistoryModal()" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-clock-rotate-left text-blue-600 text-base"></i>
+                        <span class="font-semibold text-gray-700">Riwayat Pesanan</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-400"></i>
+                </button>
+                <button onclick="openEditProfileModal()" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-user-pen text-amber-600 text-base"></i>
+                        <span class="font-semibold text-gray-700">Edit Profil & Alamat</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-400"></i>
+                </button>
+            </div>
+
+            <button onclick="logoutRole()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3.5 rounded-2xl text-xs transition border border-red-200 flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Keluar dari Akun</span>
+            </button>
+        </section>
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="max-w-md mx-auto fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30">
+        <div id="nav-buttons" class="grid grid-cols-4 py-2 text-center text-[10px] font-semibold text-gray-500">
+            <button onclick="switchView('home')" class="flex flex-col items-center justify-center text-emerald-600 space-y-1">
+                <i class="fa-solid fa-house-chimney text-lg"></i>
+                <span>Beranda</span>
+            </button>
+            <button onclick="openHistoryModal()" class="flex flex-col items-center justify-center hover:text-emerald-600 space-y-1">
+                <i class="fa-solid fa-receipt text-lg"></i>
+                <span>Aktivitas</span>
+            </button>
+            <button onclick="openChatModal()" class="flex flex-col items-center justify-center hover:text-emerald-600 space-y-1 relative">
+                <i class="fa-solid fa-comments text-lg"></i>
+                <span>Pesan</span>
+                <span id="chat-nav-dot" class="hidden absolute top-0 right-6 w-2 h-2 bg-pink-500 rounded-full"></span>
+            </button>
+            <button id="nav-btn-account" onclick="handleAccountButtonClick()" class="flex flex-col items-center justify-center hover:text-emerald-600 space-y-1">
+                <i class="fa-solid fa-user text-lg"></i>
+                <span id="nav-user-label">Akun</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- MODAL 1: AUTHENTICATION (LOGIN & REGISTRATION) -->
+    <div id="modal-auth" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 relative overflow-hidden max-h-[90vh] overflow-y-auto">
+            <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="text-center mb-5">
+                <div class="w-14 h-14 bg-gradient-to-tr from-emerald-500 to-pink-500 rounded-2xl mx-auto flex items-center justify-center text-white font-extrabold text-2xl shadow-md mb-2">
+                    JP
+                </div>
+                <h3 id="auth-modal-title" class="text-lg font-bold text-gray-800">Masuk ke JEK-PING</h3>
+                <p class="text-xs text-gray-500">Layanan Antar Jemput Kecamatan Bandar</p>
+            </div>
+
+            <!-- Toggle Mode Login vs Daftar -->
+            <div class="flex bg-gray-100 p-1 rounded-xl mb-4 text-[11px] font-bold">
+                <button id="tab-mode-login" onclick="switchAuthMode('login')" class="flex-1 py-2 rounded-lg bg-white text-emerald-600 shadow-sm transition">Masuk</button>
+                <button id="tab-mode-register" onclick="switchAuthMode('register')" class="flex-1 py-2 rounded-lg text-gray-500 transition">Daftar Akun Baru</button>
+            </div>
+
+            <!-- FORM LOGIN -->
+            <form id="form-login" onsubmit="handleLoginSubmit(event)" class="space-y-3 text-left">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Email / Username / Telepon</label>
+                    <input type="text" id="login-identifier" placeholder="driverjek / admin@jek.com / user@gmail.com" required class="w-full text-xs p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Kata Sandi</label>
+                    <input type="password" id="login-password" placeholder="••••••••" required class="w-full text-xs p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500">
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md transition text-xs">
+                    MASUK SEKARANG
+                </button>
+            </form>
+
+            <!-- FORM REGISTRASI (KHUSUS PELANGGAN / PENGGUNA) -->
+            <form id="form-register" onsubmit="handleRegisterSubmit(event)" class="space-y-3 text-left hidden">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Nama Lengkap</label>
+                    <input type="text" id="reg-fullname" placeholder="Nama Anda" required class="w-full text-xs p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Alamat Email</label>
+                    <input type="email" id="reg-email" placeholder="nama@email.com" required class="w-full text-xs p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Nomor WhatsApp / HP</label>
+                    <input type="tel" id="reg-phone" placeholder="08123456789" required class="w-full text-xs p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Kata Sandi</label>
+                    <input type="password" id="reg-password" placeholder="Minimal 6 karakter" required minlength="6" class="w-full text-xs p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500">
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-r from-emerald-600 to-pink-500 hover:from-emerald-700 hover:to-pink-600 text-white font-bold py-3 rounded-xl shadow-md transition text-xs">
+                    BUAT AKUN PELANGGAN BARU
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT PROFILE -->
+    <div id="modal-edit-profile" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-5 relative overflow-hidden space-y-4">
+            <button onclick="closeEditProfileModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-base font-bold text-gray-800 flex items-center gap-2">
+                <i class="fa-solid fa-user-pen text-emerald-500"></i> Edit Profil Anda
+            </h3>
+
+            <form onsubmit="saveProfileChanges(event)" class="space-y-3 text-left">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Nama Lengkap</label>
+                    <input type="text" id="edit-profile-name" required class="w-full text-xs p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Nomor Telepon</label>
+                    <input type="tel" id="edit-profile-phone" required class="w-full text-xs p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 font-sans">
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl shadow transition text-xs">
+                    Simpan Perubahan
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: TOP UP SALDO PINGPAY WITH DYNAMIC ADMIN QRIS -->
+    <div id="modal-topup" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-5 relative overflow-hidden space-y-4 max-h-[90vh] overflow-y-auto">
+            <button onclick="closeTopUpModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-base font-bold text-gray-800 flex items-center gap-2">
+                <i class="fa-solid fa-wallet text-emerald-500"></i> Top-Up Saldo PingPay
+            </h3>
+
+            <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-600">Pilih Nominal</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="selectTopUpAmount(20000)" class="topup-amount-btn border border-gray-200 p-2 rounded-xl text-xs font-semibold hover:border-emerald-500 hover:bg-emerald-50">Rp 20.000</button>
+                    <button onclick="selectTopUpAmount(50000)" class="topup-amount-btn border border-gray-200 p-2 rounded-xl text-xs font-semibold hover:border-emerald-500 hover:bg-emerald-50">Rp 50.000</button>
+                    <button onclick="selectTopUpAmount(100000)" class="topup-amount-btn border border-gray-200 p-2 rounded-xl text-xs font-semibold hover:border-emerald-500 hover:bg-emerald-50">Rp 100.000</button>
+                </div>
+                <input type="number" id="input-custom-topup" placeholder="Atau masukan nominal lain" class="w-full text-xs p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 mt-2">
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-600">Metode Pembayaran</label>
+                <select id="topup-method" onchange="renderQrisDisplay()" class="w-full text-xs p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 font-medium">
+                    <option value="QRIS">QRIS All Payment (Scan Langsung)</option>
+                    <option value="BCA">Transfer Bank / E-Wallet Backup</option>
+                </select>
+            </div>
+
+            <!-- DYNAMIC QRIS CONTAINER DISPLAY -->
+            <div id="topup-qris-container" class="bg-gray-50 p-3.5 rounded-2xl border border-gray-200 text-center space-y-2">
+                <div class="bg-white p-2.5 inline-block rounded-xl border border-gray-200 shadow-sm">
+                    <img id="display-modal-qris-img" src="" alt="Scan Kode QRIS" class="w-44 h-44 object-contain mx-auto">
+                </div>
+                <div>
+                    <h4 id="display-modal-qris-name" class="font-extrabold text-xs text-gray-800 uppercase"></h4>
+                    <p class="text-[10px] text-gray-500 mt-0.5">Scan menggunakan Gopay, OVO, Dana, ShopeePay, atau Mobile Banking</p>
+                </div>
+                <div class="bg-emerald-50 p-2 rounded-xl border border-emerald-100 flex justify-between items-center text-xs">
+                    <span id="display-modal-qris-rek" class="font-mono font-bold text-emerald-800 text-[11px] truncate"></span>
+                    <button onclick="copyRekeningText()" class="text-[10px] bg-emerald-600 text-white font-bold px-2 py-1 rounded-md hover:bg-emerald-700">Salin</button>
+                </div>
+            </div>
+
+            <button onclick="processTopUp()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md transition text-xs">
+                SAYA SUDAH BAYAR / KONFIRMASI
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 3: CHAT SYSTEM -->
+    <div id="modal-chat" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[500px]">
+            <!-- Chat Header -->
+            <div class="bg-emerald-600 text-white p-3.5 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-9 h-9 bg-white text-emerald-600 rounded-full font-bold flex items-center justify-center shadow overflow-hidden">
+                        <i class="fa-solid fa-headset"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-xs">Layanan Chat JEK-PING</h4>
+                        <p class="text-[10px] text-emerald-100">Bantuan & Komunikasi Driver</p>
+                    </div>
+                </div>
+                <button onclick="closeChatModal()" class="text-white hover:text-gray-200">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Chat Messages Box -->
+            <div id="chat-messages" class="flex-1 p-3 overflow-y-auto space-y-2 text-xs bg-gray-50">
+                <div class="bg-white border border-gray-200 p-2.5 rounded-2xl rounded-tl-none max-w-[80%] text-gray-800 shadow-sm">
+                    Halo, selamat datang di layanan pesan JEK-PING Kecamatan Bandar. Ada yang bisa kami bantu?
+                </div>
+            </div>
+
+            <!-- Chat Quick Templates -->
+            <div class="p-2 border-t border-gray-100 flex gap-1 overflow-x-auto hide-scrollbar bg-white">
+                <button onclick="sendQuickChat('Oke ditunggu di balai desa')" class="whitespace-nowrap bg-gray-100 hover:bg-gray-200 text-[10px] px-2.5 py-1 rounded-full text-gray-600 font-medium">Oke ditunggu di balai desa</button>
+                <button onclick="sendQuickChat('Depan warung ya mas')" class="whitespace-nowrap bg-gray-100 hover:bg-gray-200 text-[10px] px-2.5 py-1 rounded-full text-gray-600 font-medium">Depan warung ya mas</button>
+                <button onclick="sendQuickChat('Saya di lokasi')" class="whitespace-nowrap bg-gray-100 hover:bg-gray-200 text-[10px] px-2.5 py-1 rounded-full text-gray-600 font-medium">Saya di lokasi</button>
+            </div>
+
+            <!-- Chat Input -->
+            <form onsubmit="handleSendChat(event)" class="p-2.5 bg-white border-t border-gray-100 flex items-center gap-2">
+                <input type="text" id="chat-input" placeholder="Tulis pesan..." class="flex-1 text-xs p-2 bg-gray-100 rounded-xl focus:outline-none focus:border-emerald-500">
+                <button type="submit" class="w-8 h-8 bg-emerald-600 text-white rounded-xl flex items-center justify-center shadow hover:bg-emerald-700">
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 4: MERCHANT KULINER / BELANJA DETIL -->
+    <div id="modal-merchant" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[520px] relative">
+            <button onclick="closeMerchantModal()" class="absolute top-3 right-3 bg-white/80 p-1.5 rounded-full shadow text-gray-700 z-10 hover:bg-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="relative h-36">
+                <img id="merchant-modal-img" src="" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-3">
+                    <div>
+                        <h3 id="merchant-modal-name" class="text-white font-bold text-base"></h3>
+                        <p id="merchant-modal-sub" class="text-xs text-gray-200"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3 flex-1 overflow-y-auto space-y-3 bg-gray-50">
+                <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wider">Pilih Menu</h4>
+                <div id="merchant-menu-list" class="space-y-2"></div>
+            </div>
+
+            <div class="p-3 bg-white border-t border-gray-100 flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] text-gray-400 font-medium">Total Item Selected</span>
+                    <h4 id="merchant-modal-total" class="text-sm font-bold text-emerald-600">Rp 0</h4>
+                </div>
+                <button onclick="confirmMerchantOrder()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow">
+                    Lanjut Pesan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 5: RIWAYAT TRANSAKSI -->
+    <div id="modal-history" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-5 relative overflow-hidden flex flex-col h-[480px]">
+            <button onclick="closeHistoryModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left text-emerald-500"></i> Riwayat Aktivitas
+            </h3>
+
+            <div id="history-orders-list" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+        </div>
+    </div>
+
+    <!-- MODAL 6: NOTIFIKASI -->
+    <div id="modal-notif" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-5 relative overflow-hidden space-y-3">
+            <button onclick="toggleNotificationsModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-base font-bold text-gray-800 flex items-center gap-2">
+                <i class="fa-solid fa-bell text-yellow-500"></i> Notifikasi Sistem
+            </h3>
+
+            <div class="space-y-2 text-xs">
+                <div class="p-2.5 bg-emerald-50 border border-emerald-100 rounded-xl space-y-1">
+                    <div class="flex justify-between font-bold text-emerald-800">
+                        <span>Selamat Datang di JEK-PING!</span>
+                        <span class="text-[10px] text-emerald-600">Info</span>
+                    </div>
+                    <p class="text-emerald-700">Nikmati layanan ojek dan kurir lokal terbaik di Kecamatan Bandar.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Notification Toast -->
+    <div id="toast" class="fixed top-16 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-4 py-2.5 rounded-full shadow-xl opacity-0 transition-opacity duration-300 pointer-events-none z-50 flex items-center space-x-2">
+        <i class="fa-solid fa-circle-info text-pink-400"></i>
+        <span id="toast-message">Notifikasi</span>
+    </div>
+
+    <script>
+        // Real Application State (with LocalStorage Persistence)
+        let currentUser = null; // Object { fullname, email, phone, role, balance }
+        let registeredUsersList = [];
+        let realOrdersList = [];
+
+        let currentService = 'jemput';
+        let isDiscountApplied = false;
+        let activeBasePrice = 10000;
+        let authModalMode = 'login'; // 'login' or 'register'
+        let isDriverOnline = true;
+        let orderAnimationId = null;
+        let activeMerchantMenu = [];
+        let merchantCartTotal = 0;
+        let currentActiveOrder = null;
+
+        // Admin Controlled QRIS Data Settings
+        let qrisConfig = {
+            url: "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=JEKPING-BANDAR-OFFICIAL-QRIS",
+            name: "JEK-PING BANDAR OFFICIAL",
+            rekening: "0812-3456-7890 (BCA/DANA)"
+        };
+
+        // Geofencing / Area Limitation Settings
+        let isGeofenceEnabled = true;
+        let allowedCoverageAreas = [
+            "Desa Bandar", 
+            "Desa Bangunsari", 
+            "Desa Jeruk", 
+            "Desa Kledung", 
+            "Desa Ngunut", 
+            "Desa Petungsinarang", 
+            "Desa Tumpuk", 
+            "Desa Watupatok"
+        ];
+
+        // Merchant Menus Database
+        const merchantDB = {
+            'Warung Bu Siti - Bandar': {
+                img: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=300&q=80',
+                sub: 'Desa Bandar RT 01 • Samping Balai Desa',
+                items: [
+                    { name: 'Nasi Goreng Kampung', price: 12000 },
+                    { name: 'Mie Goreng Telur', price: 10000 },
+                    { name: 'Es Teh Manis', price: 3000 }
+                ]
+            },
+            'Kedai Kopi Watupatok': {
+                img: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&w=300&q=80',
+                sub: 'Desa Watupatok • Depan Lapangan',
+                items: [
+                    { name: 'Kopi Hitam Tubruk', price: 5000 },
+                    { name: 'Kopi Susu Gula Aren', price: 8000 },
+                    { name: 'Gorengan Tempe (5 pcs)', price: 5000 }
+                ]
+            },
+            'Ayam Geprek Bangunsari': {
+                img: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=300&q=80',
+                sub: 'Desa Bangunsari • Dekat Pertigaan',
+                items: [
+                    { name: 'Paket Ayam Geprek + Nasi', price: 15000 },
+                    { name: 'Ayam Geprek Mozzarella', price: 18000 },
+                    { name: 'Es Jeruk Peras', price: 4000 }
+                ]
+            }
+        };
+
+        window.onload = function() {
+            loadLocalStorageData();
+            updateUserHeaderAndUI();
+            updateAllowedAreaText();
+            renderQrisDisplay();
+            initLiveMap('live-map-canvas');
+        };
+
+        // LOCAL STORAGE LOAD/SAVE & DEFAULT USERS SETUP
+        function loadLocalStorageData() {
+            const savedUsers = localStorage.getItem('jekping_users');
+            if (savedUsers) {
+                registeredUsersList = JSON.parse(savedUsers);
+            } else {
+                // Default pre-registered system accounts
+                registeredUsersList = [
+                    {
+                        fullname: "Mitra Driver JEK-PING",
+                        email: "driverjek",
+                        phone: "081200000000",
+                        role: "driver",
+                        password: "jekping123",
+                        balance: 50000
+                    },
+                    {
+                        fullname: "Administrator Bandar",
+                        email: "admin@jek.com",
+                        phone: "081211111111",
+                        role: "admin",
+                        password: "adminjek123",
+                        balance: 100000
+                    }
+                ];
+                localStorage.setItem('jekping_users', JSON.stringify(registeredUsersList));
+            }
+
+            const savedOrders = localStorage.getItem('jekping_orders');
+            if (savedOrders) {
+                realOrdersList = JSON.parse(savedOrders);
+            }
+            const savedSession = localStorage.getItem('jekping_session');
+            if (savedSession) {
+                currentUser = JSON.parse(savedSession);
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('jekping_users', JSON.stringify(registeredUsersList));
+            localStorage.setItem('jekping_orders', JSON.stringify(realOrdersList));
+            if (currentUser) {
+                localStorage.setItem('jekping_session', JSON.stringify(currentUser));
+            } else {
+                localStorage.removeItem('jekping_session');
+            }
+        }
+
+        // ACCOUNT & AUTH SYSTEM LOGIC
+        function handleAccountButtonClick() {
+            if (!currentUser) {
+                toggleAuthModal();
+            } else {
+                if (currentUser.role === 'admin') {
+                    switchView('admin');
+                } else if (currentUser.role === 'driver') {
+                    switchView('driver');
+                } else {
+                    switchView('profile');
+                }
+            }
+        }
+
+        function toggleAuthModal() {
+            const modal = document.getElementById('modal-auth');
+            modal.classList.toggle('hidden');
+        }
+
+        function switchAuthMode(mode) {
+            authModalMode = mode;
+            const tabLogin = document.getElementById('tab-mode-login');
+            const tabRegister = document.getElementById('tab-mode-register');
+            const formLogin = document.getElementById('form-login');
+            const formRegister = document.getElementById('form-register');
+            const title = document.getElementById('auth-modal-title');
+
+            if (mode === 'login') {
+                tabLogin.className = "flex-1 py-2 rounded-lg bg-white text-emerald-600 shadow-sm transition font-bold";
+                tabRegister.className = "flex-1 py-2 rounded-lg text-gray-500 transition font-bold";
+                formLogin.classList.remove('hidden');
+                formRegister.classList.add('hidden');
+                title.innerText = "Masuk ke JEK-PING";
+            } else {
+                tabRegister.className = "flex-1 py-2 rounded-lg bg-white text-emerald-600 shadow-sm transition font-bold";
+                tabLogin.className = "flex-1 py-2 rounded-lg text-gray-500 transition font-bold";
+                formRegister.classList.remove('hidden');
+                formLogin.classList.add('hidden');
+                title.innerText = "Registrasi Akun Pelanggan";
+            }
+        }
+
+        function handleRegisterSubmit(e) {
+            e.preventDefault();
+            const fullname = document.getElementById('reg-fullname').value.trim();
+            const email = document.getElementById('reg-email').value.trim().toLowerCase();
+            const phone = document.getElementById('reg-phone').value.trim();
+            const role = 'user'; // Pendaftaran khusus untuk Pelanggan / Pengguna
+            const password = document.getElementById('reg-password').value;
+
+            const existing = registeredUsersList.find(u => u.email === email);
+            if (existing) {
+                showToast("Email sudah terdaftar. Silakan lakukan login!");
+                switchAuthMode('login');
+                return;
+            }
+
+            const newUser = {
+                fullname,
+                email,
+                phone,
+                role,
+                password,
+                balance: 0
+            };
+
+            registeredUsersList.push(newUser);
+            currentUser = newUser;
+            saveToLocalStorage();
+
+            toggleAuthModal();
+            updateUserHeaderAndUI();
+            showToast(`Akun berhasil dibuat! Selamat datang, ${fullname}`);
+
+            switchView('home');
+        }
+
+        function handleLoginSubmit(e) {
+            e.preventDefault();
+            const identifier = document.getElementById('login-identifier').value.trim().toLowerCase();
+            const password = document.getElementById('login-password').value;
+
+            const user = registeredUsersList.find(u => (u.email === identifier || u.phone === identifier) && u.password === password);
+
+            if (user) {
+                currentUser = user;
+                saveToLocalStorage();
+                toggleAuthModal();
+                updateUserHeaderAndUI();
+                showToast(`Berhasil masuk! Selamat datang, ${user.fullname}`);
+
+                if (currentUser.role === 'admin') switchView('admin');
+                else if (currentUser.role === 'driver') switchView('driver');
+                else switchView('home');
+            } else {
+                showToast("Username/Email atau kata sandi tidak cocok!");
+            }
+        }
+
+        function logoutRole() {
+            currentUser = null;
+            saveToLocalStorage();
+            updateUserHeaderAndUI();
+            showToast("Berhasil keluar dari akun.");
+            switchView('home');
+        }
+
+        function updateUserHeaderAndUI() {
+            const badge = document.getElementById('user-role-badge');
+            const navLabel = document.getElementById('nav-user-label');
+
+            if (!currentUser) {
+                badge.classList.add('hidden');
+                navLabel.innerText = "Masuk";
+                document.getElementById('display-user-balance').innerText = "Rp 0";
+                return;
+            }
+
+            badge.classList.remove('hidden');
+            badge.innerText = currentUser.role.toUpperCase();
+
+            if (currentUser.role === 'admin') {
+                badge.className = "text-[10px] font-extrabold bg-amber-400 text-gray-900 px-2 py-0.5 rounded-full shadow";
+                navLabel.innerText = "Admin";
+            } else if (currentUser.role === 'driver') {
+                badge.className = "text-[10px] font-extrabold bg-teal-300 text-teal-950 px-2 py-0.5 rounded-full shadow";
+                navLabel.innerText = "Driver";
+                document.getElementById('driver-profile-name').innerHTML = `${currentUser.fullname} <i class="fa-solid fa-circle-check text-emerald-300 text-xs"></i>`;
+            } else {
+                badge.className = "text-[10px] font-extrabold bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full shadow";
+                navLabel.innerText = "Profil";
+            }
+
+            // Update user balance UI
+            document.getElementById('display-user-balance').innerText = `Rp ${currentUser.balance.toLocaleString('id-ID')}`;
+            const elements = document.getElementsByClassName('val-user-balance');
+            for (let el of elements) {
+                el.innerText = currentUser.balance.toLocaleString('id-ID');
+            }
+
+            // Update Profile View data
+            document.getElementById('profile-name').innerText = currentUser.fullname;
+            document.getElementById('profile-email').innerText = currentUser.email;
+            document.getElementById('profile-phone').innerText = currentUser.phone;
+            document.getElementById('profile-role').innerText = currentUser.role.toUpperCase();
+            document.getElementById('profile-balance').innerText = `Rp ${currentUser.balance.toLocaleString('id-ID')}`;
+        }
+
+        function openEditProfileModal() {
+            if (!currentUser) return;
+            document.getElementById('edit-profile-name').value = currentUser.fullname;
+            document.getElementById('edit-profile-phone').value = currentUser.phone;
+            document.getElementById('modal-edit-profile').classList.remove('hidden');
+        }
+
+        function closeEditProfileModal() {
+            document.getElementById('modal-edit-profile').classList.add('hidden');
+        }
+
+        function saveProfileChanges(e) {
+            e.preventDefault();
+            if (!currentUser) return;
+
+            currentUser.fullname = document.getElementById('edit-profile-name').value.trim();
+            currentUser.phone = document.getElementById('edit-profile-phone').value.trim();
+
+            // Update in list
+            const idx = registeredUsersList.findIndex(u => u.email === currentUser.email);
+            if (idx !== -1) registeredUsersList[idx] = currentUser;
+
+            saveToLocalStorage();
+            updateUserHeaderAndUI();
+            closeEditProfileModal();
+            showToast("Profil berhasil diperbarui!");
+        }
+
+        // ADMIN QRIS MANAGEMENT LOGIC
+        function saveQrisSettings() {
+            const urlInput = document.getElementById('admin-qris-url').value;
+            const nameInput = document.getElementById('admin-qris-name').value;
+            const rekInput = document.getElementById('admin-qris-rekening').value;
+
+            if (!urlInput.trim()) {
+                showToast("Masukkan URL Gambar QRIS yang valid!");
+                return;
+            }
+
+            qrisConfig.url = urlInput.trim();
+            qrisConfig.name = nameInput.trim();
+            qrisConfig.rekening = rekInput.trim();
+
+            renderQrisDisplay();
+            showToast("Pengaturan QRIS Pembayaran Berhasil Disimpan!");
+        }
+
+        function renderQrisDisplay() {
+            const imgEl = document.getElementById('display-modal-qris-img');
+            const nameEl = document.getElementById('display-modal-qris-name');
+            const rekEl = document.getElementById('display-modal-qris-rek');
+
+            if (imgEl) imgEl.src = qrisConfig.url;
+            if (nameEl) nameEl.innerText = qrisConfig.name;
+            if (rekEl) rekEl.innerText = qrisConfig.rekening;
+        }
+
+        function copyRekeningText() {
+            const textToCopy = qrisConfig.rekening;
+            const tempInput = document.createElement("input");
+            tempInput.value = textToCopy;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+            showToast("Nomor Rekening/VA Berhasil Disalin!");
+        }
+
+        // GEOFENCING VALIDATION LOGIC
+        function validateAreaCoverage() {
+            if (!isGeofenceEnabled) {
+                document.getElementById('area-out-of-range-alert').classList.add('hidden');
+                return true;
+            }
+
+            const pickupVillage = document.getElementById('select-pickup-village') ? document.getElementById('select-pickup-village').value : '';
+            const destVillage = document.getElementById('select-dest-village') ? document.getElementById('select-dest-village').value : '';
+
+            const isPickupValid = allowedCoverageAreas.some(area => pickupVillage.toLowerCase().includes(area.toLowerCase()) || area.toLowerCase().includes(pickupVillage.toLowerCase()));
+            const isDestValid = allowedCoverageAreas.some(area => destVillage.toLowerCase().includes(area.toLowerCase()) || area.toLowerCase().includes(destVillage.toLowerCase()));
+
+            const alertBox = document.getElementById('area-out-of-range-alert');
+            if (!isPickupValid || !isDestValid) {
+                alertBox.classList.remove('hidden');
+                return false;
+            } else {
+                alertBox.classList.add('hidden');
+                return true;
+            }
+        }
+
+        function updateLocationDetails() {
+            validateAreaCoverage();
+        }
+
+        function toggleGeofencingSetting() {
+            isGeofenceEnabled = document.getElementById('toggle-geofence').checked;
+            validateAreaCoverage();
+            showToast(isGeofenceEnabled ? "Fitur Pembatasan Desa Aktif" : "Pembatasan Wilayah Dinonaktifkan");
+        }
+
+        function saveGeofenceSettings() {
+            const rawInput = document.getElementById('admin-input-allowed-areas').value;
+            allowedCoverageAreas = rawInput.split(',').map(item => item.trim()).filter(i => i.length > 0);
+            updateAllowedAreaText();
+            validateAreaCoverage();
+            showToast("Daftar Desa Operasional Berhasil Diperbarui!");
+        }
+
+        function updateAllowedAreaText() {
+            const textEl = document.getElementById('display-allowed-areas');
+            if(textEl) {
+                textEl.innerText = allowedCoverageAreas.join(', ');
+            }
+        }
+
+        // View Switcher Function
+        function switchView(viewName) {
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-order').classList.add('hidden');
+            document.getElementById('view-tracking').classList.add('hidden');
+            document.getElementById('view-admin').classList.add('hidden');
+            document.getElementById('view-driver').classList.add('hidden');
+            document.getElementById('view-profile').classList.add('hidden');
+
+            if (viewName === 'home') {
+                document.getElementById('view-home').classList.remove('hidden');
+            } else if (viewName === 'order') {
+                document.getElementById('view-order').classList.remove('hidden');
+                validateAreaCoverage();
+                setTimeout(() => initLiveMap('live-map-canvas'), 100);
+            } else if (viewName === 'tracking') {
+                document.getElementById('view-tracking').classList.remove('hidden');
+                setTimeout(() => initTrackingMap(), 100);
+            } else if (viewName === 'admin') {
+                document.getElementById('view-admin').classList.remove('hidden');
+                renderAdminOrders();
+            } else if (viewName === 'driver') {
+                document.getElementById('view-driver').classList.remove('hidden');
+                renderDriverOrders();
+            } else if (viewName === 'profile') {
+                document.getElementById('view-profile').classList.remove('hidden');
+            }
+            window.scrollTo(0, 0);
+        }
+
+        // Service Opener Logic
+        function openService(type) {
+            if (!currentUser) {
+                showToast("Silakan masuk atau daftar akun terlebih dahulu!");
+                toggleAuthModal();
+                return;
+            }
+
+            currentService = type;
+            const serviceTitle = document.getElementById('service-title');
+            const serviceDesc = document.getElementById('service-desc');
+            const serviceBadge = document.getElementById('service-icon-badge');
+            const extraInputs = document.getElementById('extra-inputs');
+            const inputPickup = document.getElementById('input-pickup');
+            const inputDest = document.getElementById('input-destination');
+
+            isDiscountApplied = false;
+            document.getElementById('row-discount').classList.add('hidden');
+            extraInputs.classList.add('hidden');
+
+            if (type === 'jemput') {
+                serviceTitle.innerText = "Antar Jemput";
+                serviceDesc.innerText = "Layanan ojek online cepat antar desa di Kecamatan Bandar";
+                serviceBadge.innerHTML = `<i class="fa-solid fa-motorcycle text-emerald-600"></i>`;
+                inputPickup.placeholder = "Detail Lokasi / Balai Desa / RT RW / Patokan";
+                inputDest.placeholder = "Detail Tujuan / Rumah / Sekolah / Lapangan";
+                activeBasePrice = 10000;
+            } else if (type === 'barang') {
+                serviceTitle.innerText = "Antar Barang";
+                serviceDesc.innerText = "Kirim paket & dokumen antardesa di Kec. Bandar";
+                serviceBadge.innerHTML = `<i class="fa-solid fa-box-archive text-blue-600"></i>`;
+                inputPickup.placeholder = "Lokasi Pengambilan Paket / Rumah / Warung";
+                inputDest.placeholder = "Alamat Penerima Paket / RT RW";
+                extraInputs.classList.remove('hidden');
+                document.getElementById('field-item-name').classList.remove('hidden');
+                activeBasePrice = 12000;
+            } else if (type === 'belanja') {
+                serviceTitle.innerText = "Jasa Belanja";
+                serviceDesc.innerText = "Driver kami siap belanjakan kebutuhan warung / pasar";
+                serviceBadge.innerHTML = `<i class="fa-solid fa-cart-shopping text-amber-600"></i>`;
+                inputPickup.placeholder = "Nama Warung / Pasar Bandar / Toko Kelontong";
+                inputDest.placeholder = "Alamat Pengiriman Barang Belanjaan";
+                extraInputs.classList.remove('hidden');
+                document.getElementById('field-item-name').classList.remove('hidden');
+                activeBasePrice = 15000;
+            } else if (type === 'kuliner') {
+                serviceTitle.innerText = "Antar Makanan & Minuman";
+                serviceDesc.innerText = "Pesan makanan favorit dari kedai lokal Bandar";
+                serviceBadge.innerHTML = `<i class="fa-solid fa-utensils text-pink-600"></i>`;
+                inputPickup.placeholder = "Nama Warung / Kedai Makanan";
+                inputDest.placeholder = "Alamat Pengantaran Makanan";
+                extraInputs.classList.remove('hidden');
+                document.getElementById('field-item-name').classList.remove('hidden');
+                activeBasePrice = 8000;
+            }
+
+            calculatePrice();
+            switchView('order');
+        }
+
+        function calculatePrice() {
+            const handlingFee = 1000;
+            let total = activeBasePrice + handlingFee;
+
+            document.getElementById('price-base').innerText = `Rp ${activeBasePrice.toLocaleString('id-ID')}`;
+
+            if (isDiscountApplied) {
+                const discount = Math.round(total * 0.5);
+                document.getElementById('price-discount').innerText = `-Rp ${discount.toLocaleString('id-ID')}`;
+                total -= discount;
+            }
+
+            document.getElementById('price-total').innerText = `Rp ${total.toLocaleString('id-ID')}`;
+        }
+
+        function applyPromo() {
+            if (!isDiscountApplied) {
+                isDiscountApplied = true;
+                document.getElementById('row-discount').classList.remove('hidden');
+                calculatePrice();
+                showToast("Voucher PINGBANDAR Berhasil Dipasang!");
+            } else {
+                showToast("Voucher Sudah Terpasang");
+            }
+        }
+
+        function startOrderProcess() {
+            if (!currentUser) {
+                showToast("Silakan login terlebih dahulu untuk melakukan pemesanan!");
+                toggleAuthModal();
+                return;
+            }
+
+            if (!validateAreaCoverage()) {
+                showToast("Pemesanan gagal! Alamat di luar desa operasional Kecamatan Bandar.");
+                return;
+            }
+
+            const payMethod = document.getElementById('payment-method').value;
+            const priceText = document.getElementById('price-total').innerText;
+            const numericTotal = parseInt(priceText.replace(/[^0-9]/g, ''));
+
+            if (payMethod === 'PingPay' && currentUser.balance < numericTotal) {
+                showToast("Saldo PingPay Kurang! Silakan Isi Saldo terlebih dahulu.");
+                openTopUpModal();
+                return;
+            }
+
+            if (payMethod === 'PingPay') {
+                currentUser.balance -= numericTotal;
+                saveToLocalStorage();
+                updateUserHeaderAndUI();
+            }
+
+            const pickupVillage = document.getElementById('select-pickup-village').value;
+            const destVillage = document.getElementById('select-dest-village').value;
+            const pickupDetail = document.getElementById('input-pickup').value;
+            const destDetail = document.getElementById('input-destination').value;
+
+            // Find an active driver if available
+            const driverUser = registeredUsersList.find(u => u.role === 'driver') || { fullname: 'Driver JEK-PING Bandar', phone: '0812345678' };
+
+            currentActiveOrder = {
+                id: `JP-${Math.floor(1000 + Math.random() * 9000)}`,
+                service: document.getElementById('service-title').innerText,
+                user: currentUser.fullname,
+                userEmail: currentUser.email,
+                driver: driverUser.fullname,
+                pickup: `${pickupVillage} (${pickupDetail || 'Lokasi'})`,
+                dest: `${destVillage} (${destDetail || 'Tujuan'})`,
+                status: 'Menunggu Driver',
+                amount: priceText,
+                time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+            };
+            realOrdersList.unshift(currentActiveOrder);
+            saveToLocalStorage();
+
+            switchView('tracking');
+            document.getElementById('tracking-status-title').innerText = "Mencari Driver JEK-PING...";
+            document.getElementById('tracking-status-desc').innerText = "Sistem sedang mencari driver terdekat di wilayah Kecamatan Bandar.";
+            document.getElementById('driver-info-card').classList.add('hidden');
+            document.getElementById('status-spinner').classList.remove('hidden');
+
+            setTimeout(() => {
+                document.getElementById('tracking-status-title').innerText = "Driver Ditemukan!";
+                document.getElementById('tracking-status-desc').innerText = `Driver ${driverUser.fullname} sedang menuju lokasi penjemputan (${pickupVillage}).`;
+                document.getElementById('assigned-driver-name').innerText = driverUser.fullname;
+                document.getElementById('driver-info-card').classList.remove('hidden');
+                document.getElementById('chat-badge').classList.remove('hidden');
+                document.getElementById('chat-nav-dot').classList.remove('hidden');
+                currentActiveOrder.status = 'Dalam Proses';
+                saveToLocalStorage();
+            }, 3000);
+        }
+
+        function cancelOrder() {
+            showToast("Pesanan Dibatalkan");
+            if (currentActiveOrder) {
+                currentActiveOrder.status = 'Dibatalkan';
+                saveToLocalStorage();
+            }
+            switchView('home');
+        }
+
+        // CANVAS MAP SIMULATION WITH GEOFENCE RADIUS
+        function initLiveMap(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+
+            ctx.fillStyle = "#1e293b";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (isGeofenceEnabled) {
+                ctx.strokeStyle = "rgba(236, 72, 153, 0.4)";
+                ctx.fillStyle = "rgba(236, 72, 153, 0.05)";
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 6]);
+                ctx.beginPath();
+                ctx.arc(canvas.width / 2, canvas.height / 2, 85, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            ctx.strokeStyle = "#334155";
+            ctx.lineWidth = 14;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+
+            ctx.fillStyle = "#22c55e";
+            ctx.beginPath();
+            ctx.arc(60, canvas.height / 2, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = "#ec4899";
+            ctx.beginPath();
+            ctx.arc(canvas.width - 60, canvas.height / 2, 8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function initTrackingMap() {
+            const canvas = document.getElementById('tracking-map-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+
+            let startX = 40;
+            let startY = canvas.height / 2;
+            let endX = canvas.width - 40;
+            let endY = canvas.height / 2;
+            let currentX = startX;
+
+            if(orderAnimationId) cancelAnimationFrame(orderAnimationId);
+
+            function animate() {
+                ctx.fillStyle = "#0f172a";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.strokeStyle = "#334155";
+                ctx.lineWidth = 10;
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+
+                ctx.fillStyle = "#22c55e";
+                ctx.beginPath();
+                ctx.arc(startX, startY, 7, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = "#ec4899";
+                ctx.beginPath();
+                ctx.arc(endX, endY, 7, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = "#f59e0b";
+                ctx.beginPath();
+                ctx.arc(currentX, startY, 9, 0, Math.PI * 2);
+                ctx.fill();
+
+                currentX += 0.5;
+                if (currentX > endX) currentX = startX;
+
+                orderAnimationId = requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // TOP UP SYSTEM
+        function openTopUpModal() {
+            if (!currentUser) {
+                showToast("Silakan masuk/daftar akun untuk isi saldo!");
+                toggleAuthModal();
+                return;
+            }
+            renderQrisDisplay();
+            document.getElementById('modal-topup').classList.remove('hidden');
+        }
+        function closeTopUpModal() {
+            document.getElementById('modal-topup').classList.add('hidden');
+        }
+        function selectTopUpAmount(amt) {
+            document.getElementById('input-custom-topup').value = amt;
+        }
+        function processTopUp() {
+            if (!currentUser) return;
+            const val = parseInt(document.getElementById('input-custom-topup').value);
+            if (!val || val <= 0) {
+                showToast("Masukkan nominal top-up yang valid");
+                return;
+            }
+
+            currentUser.balance += val;
+            const idx = registeredUsersList.findIndex(u => u.email === currentUser.email);
+            if (idx !== -1) registeredUsersList[idx].balance = currentUser.balance;
+
+            saveToLocalStorage();
+            updateUserHeaderAndUI();
+            closeTopUpModal();
+            showToast(`Top Up Berhasil sebesar Rp ${val.toLocaleString('id-ID')}!`);
+        }
+
+        // CHAT SYSTEM
+        function openChatModal() {
+            document.getElementById('modal-chat').classList.remove('hidden');
+            document.getElementById('chat-badge').classList.add('hidden');
+            document.getElementById('chat-nav-dot').classList.add('hidden');
+        }
+        function closeChatModal() {
+            document.getElementById('modal-chat').classList.add('hidden');
+        }
+        function sendQuickChat(text) {
+            appendChatMessage(text, 'user');
+            setTimeout(() => {
+                appendChatMessage("Siap, pesan diterima. Segera diproses!", 'driver');
+            }, 1000);
+        }
+        function handleSendChat(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            if (!input.value.trim()) return;
+            appendChatMessage(input.value, 'user');
+            input.value = '';
+
+            setTimeout(() => {
+                appendChatMessage("Baik, lokasi sedang tuju.", 'driver');
+            }, 1200);
+        }
+        function appendChatMessage(text, sender) {
+            const box = document.getElementById('chat-messages');
+            const msgEl = document.createElement('div');
+            if (sender === 'user') {
+                msgEl.className = "bg-emerald-600 text-white p-2.5 rounded-2xl rounded-tr-none max-w-[80%] ml-auto shadow-sm";
+            } else {
+                msgEl.className = "bg-white border border-gray-200 p-2.5 rounded-2xl rounded-tl-none max-w-[80%] text-gray-800 shadow-sm";
+            }
+            msgEl.innerText = text;
+            box.appendChild(msgEl);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        // KULINER / MERCHANT SELECTION SYSTEM
+        function openMerchantDetails(merchantName, type) {
+            const data = merchantDB[merchantName];
+            if (!data) return;
+            document.getElementById('merchant-modal-name').innerText = merchantName;
+            document.getElementById('merchant-modal-sub').innerText = data.sub;
+            document.getElementById('merchant-modal-img').src = data.img;
+
+            activeMerchantMenu = data.items.map(item => ({ ...item, qty: 0 }));
+            renderMerchantItems();
+            document.getElementById('modal-merchant').classList.remove('hidden');
+        }
+        function closeMerchantModal() {
+            document.getElementById('modal-merchant').classList.add('hidden');
+        }
+        function renderMerchantItems() {
+            const container = document.getElementById('merchant-menu-list');
+            container.innerHTML = '';
+            merchantCartTotal = 0;
+
+            activeMerchantMenu.forEach((item, idx) => {
+                const itemTotal = item.qty * item.price;
+                merchantCartTotal += itemTotal;
+
+                const el = document.createElement('div');
+                el.className = "bg-white p-2.5 rounded-xl border border-gray-200 flex items-center justify-between";
+                el.innerHTML = `
+                    <div>
+                        <h5 class="font-bold text-xs text-gray-800">${item.name}</h5>
+                        <p class="text-emerald-600 font-bold text-xs">Rp ${item.price.toLocaleString('id-ID')}</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="updateMerchantQty(${idx}, -1)" class="w-6 h-6 bg-gray-100 rounded-lg font-bold text-xs text-gray-600 flex items-center justify-center">-</button>
+                        <span class="text-xs font-bold w-4 text-center">${item.qty}</span>
+                        <button onclick="updateMerchantQty(${idx}, 1)" class="w-6 h-6 bg-emerald-600 text-white rounded-lg font-bold text-xs flex items-center justify-center">+</button>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+
+            document.getElementById('merchant-modal-total').innerText = `Rp ${merchantCartTotal.toLocaleString('id-ID')}`;
+        }
+        function updateMerchantQty(idx, change) {
+            if (activeMerchantMenu[idx].qty + change >= 0) {
+                activeMerchantMenu[idx].qty += change;
+                renderMerchantItems();
+            }
+        }
+        function confirmMerchantOrder() {
+            const selected = activeMerchantMenu.filter(i => i.qty > 0);
+            if (selected.length === 0) {
+                showToast("Pilih minimal 1 menu makanan!");
+                return;
+            }
+            const merchantName = document.getElementById('merchant-modal-name').innerText;
+            openService('kuliner');
+            document.getElementById('input-pickup').value = merchantName;
+            document.getElementById('input-item-detail').value = selected.map(s => `${s.qty}x ${s.name}`).join(', ');
+            activeBasePrice = merchantCartTotal > 0 ? merchantCartTotal : 10000;
+            calculatePrice();
+            closeMerchantModal();
+        }
+
+        function openHistoryModal() {
+            renderHistoryOrders();
+            document.getElementById('modal-history').classList.remove('hidden');
+        }
+        function closeHistoryModal() {
+            document.getElementById('modal-history').classList.add('hidden');
+        }
+        function renderHistoryOrders() {
+            const container = document.getElementById('history-orders-list');
+            container.innerHTML = '';
+
+            const userOrders = currentUser ? realOrdersList.filter(o => o.userEmail === currentUser.email || o.user === currentUser.fullname) : realOrdersList;
+
+            if (userOrders.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-xs text-gray-400">Belum ada riwayat transaksi.</div>`;
+                return;
+            }
+
+            userOrders.forEach(o => {
+                const badgeColor = o.status === 'Selesai' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
+                const div = document.createElement('div');
+                div.className = "p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs space-y-1";
+                div.innerHTML = `
+                    <div class="flex justify-between items-center font-bold">
+                        <span>${o.service}</span>
+                        <span class="${badgeColor} text-[10px] px-2 py-0.5 rounded-full">${o.status}</span>
+                    </div>
+                    <p class="text-gray-500 text-[10px]">${o.pickup} ➔ ${o.dest}</p>
+                    <div class="flex justify-between items-center pt-1 font-bold text-emerald-600">
+                        <span>Total:</span>
+                        <span>${o.amount}</span>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function toggleNotificationsModal() {
+            const modal = document.getElementById('modal-notif');
+            modal.classList.toggle('hidden');
+            document.getElementById('unread-notif-dot').classList.add('hidden');
+        }
+
+        // DRIVER APP LOGIC
+        function toggleDriverOnline() {
+            isDriverOnline = !isDriverOnline;
+            const btn = document.getElementById('btn-toggle-driver');
+            const text = document.getElementById('driver-status-text');
+            const dot = document.getElementById('driver-status-dot');
+
+            if (isDriverOnline) {
+                btn.innerText = "ONLINE";
+                btn.className = "bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] px-3 py-1 rounded-lg font-bold shadow transition";
+                text.innerText = "STATUS: ONLINE (Siap Terima Order)";
+                text.className = "text-xs font-bold text-emerald-300";
+                dot.className = "w-3 h-3 bg-emerald-400 rounded-full animate-pulse";
+                showToast("Status: Online (Siap terima order)");
+            } else {
+                btn.innerText = "OFFLINE";
+                btn.className = "bg-gray-500 hover:bg-gray-600 text-white text-[11px] px-3 py-1 rounded-lg font-bold shadow transition";
+                text.innerText = "STATUS: OFFLINE (Istirahat)";
+                text.className = "text-xs font-bold text-gray-300";
+                dot.className = "w-3 h-3 bg-gray-400 rounded-full";
+                showToast("Status: Offline");
+            }
+        }
+
+        function renderDriverOrders() {
+            const container = document.getElementById('driver-orders-list');
+            const countBadge = document.getElementById('driver-order-count');
+            const incomeEl = document.getElementById('driver-income');
+            const completedCountEl = document.getElementById('driver-completed-count');
+            container.innerHTML = '';
+
+            const activeOrders = realOrdersList.filter(o => o.status !== 'Selesai' && o.status !== 'Dibatalkan');
+            const completedOrders = realOrdersList.filter(o => o.status === 'Selesai');
+
+            countBadge.innerText = `${activeOrders.length} Order`;
+
+            let totalIncome = 0;
+            completedOrders.forEach(o => {
+                const num = parseInt(o.amount.replace(/[^0-9]/g, '')) || 0;
+                totalIncome += num;
+            });
+
+            incomeEl.innerText = `Rp ${totalIncome.toLocaleString('id-ID')}`;
+            completedCountEl.innerText = `${completedOrders.length} Pesanan Selesai`;
+
+            if (activeOrders.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-xs text-gray-400">Belum ada pesanan aktif saat ini.</div>`;
+                return;
+            }
+
+            activeOrders.forEach(o => {
+                const div = document.createElement('div');
+                div.className = "p-3.5 bg-gray-50 rounded-xl border border-gray-200 text-xs space-y-2";
+                div.innerHTML = `
+                    <div class="flex justify-between items-center font-bold">
+                        <span class="text-gray-800">${o.service} (${o.id})</span>
+                        <span class="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full">${o.status}</span>
+                    </div>
+                    <div class="text-[11px] text-gray-600 space-y-0.5">
+                        <p><i class="fa-solid fa-user text-emerald-500 mr-1"></i> <b>${o.user}</b></p>
+                        <p><i class="fa-solid fa-circle-dot text-emerald-500 mr-1"></i> Jemput: ${o.pickup}</p>
+                        <p><i class="fa-solid fa-location-dot text-pink-500 mr-1"></i> Tujuan: ${o.dest}</p>
+                    </div>
+                    <div class="flex items-center justify-between border-t border-gray-200 pt-2">
+                        <span class="font-bold text-emerald-600 text-xs">${o.amount}</span>
+                        <button onclick="finishDriverOrder('${o.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow">
+                            Selesaikan Order
+                        </button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function finishDriverOrder(orderId) {
+            const idx = realOrdersList.findIndex(o => o.id === orderId);
+            if (idx !== -1) {
+                realOrdersList[idx].status = 'Selesai';
+                saveToLocalStorage();
+                renderDriverOrders();
+                showToast(`Order ${orderId} Berhasil Diselesaikan!`);
+            }
+        }
+
+        // ADMIN RENDER LOGIC
+        function renderAdminOrders() {
+            document.getElementById('stat-total-orders').innerText = realOrdersList.length;
+            document.getElementById('stat-total-users').innerText = registeredUsersList.length;
+
+            const container = document.getElementById('admin-orders-list');
+            container.innerHTML = '';
+
+            if (realOrdersList.length === 0) {
+                container.innerHTML = `<div class="text-center py-6 text-xs text-gray-400">Belum ada riwayat transaksi pelanggan.</div>`;
+                return;
+            }
+
+            realOrdersList.forEach(o => {
+                const badgeColor = o.status === 'Selesai' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
+                const div = document.createElement('div');
+                div.className = "p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs space-y-1.5";
+                div.innerHTML = `
+                    <div class="flex justify-between items-center font-bold">
+                        <span class="text-gray-800">${o.service} [${o.id}]</span>
+                        <span class="${badgeColor} text-[10px] px-2 py-0.5 rounded-full">${o.status}</span>
+                    </div>
+                    <p class="text-[11px] text-gray-600">Pelanggan: <b>${o.user}</b> • Driver: <b>${o.driver}</b></p>
+                    <p class="text-[10px] text-gray-500 truncate">${o.pickup} ➔ ${o.dest}</p>
+                    <div class="flex justify-between items-center border-t border-gray-200 pt-1 font-bold">
+                        <span class="text-gray-400 text-[10px]">${o.time}</span>
+                        <span class="text-emerald-600">${o.amount}</span>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // TOAST SYSTEM
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            toastMsg.innerText = message;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
